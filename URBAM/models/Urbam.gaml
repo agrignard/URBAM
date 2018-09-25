@@ -44,6 +44,7 @@ global {
 		graph_per_mode["bike"] <-  as_edge_graph(road);
 		
 		do init_buttons;
+		//do initFromFile;
 		
 	}
 	
@@ -98,9 +99,9 @@ global {
 			loop j from: 0 to: data.columns -1{
 				if(data[j,i] != -1){
 					if(data[j,i] = 0){
-					  ask cell[j,i]{do new_residential;}	
+					  ask cell[j,i]{do new_residential("S");}	
 					}else{
-					 ask cell[j,i]{do new_office;}	
+					 ask cell[j,i]{do new_office("S");}	
 					}
 				}
 			}	
