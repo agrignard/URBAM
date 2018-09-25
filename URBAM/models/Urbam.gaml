@@ -290,9 +290,12 @@ species people skills: [moving]{
 	reflex wander when: dest = nil {
 		do wander bounds: origin.bounds;
 	}
-	aspect default {
-
-//		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
+	
+    aspect default {
+    	if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
+	}
+	
+	aspect tridefault {
 //		if (target != nil or dest = nil) {draw square(1.0) color: #white;}
 		float scale <- min([1,road(current_edge).traffic_density / 100])^2;
 		if (target != nil or dest = nil) {draw square(1.0) color: colormap_per_mode["car"][int(4*scale)];}
@@ -305,7 +308,7 @@ species people skills: [moving]{
 }
 grid cell width: 8 height: 8 {
 	building my_building;
-	rgb color <- #white;//#lightgray;
+	rgb color <- #lightgray;
 	action new_residential(string the_size) {
 
 		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
