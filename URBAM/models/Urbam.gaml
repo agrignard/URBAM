@@ -66,7 +66,7 @@ global {
 		write action_type;
 	}
 	
-<<<<<<< HEAD
+
 	reflex compute_traffic_density{
 		ask road {traffic_density <- 0;}
 		ask people{
@@ -81,7 +81,6 @@ global {
 		}
 	}
 	
-=======
 	action build_buildings {
 		cell selected_cell <- first(cell overlapping (circle(1) at_location #user_location));
 		if (action_type = 2) {ask selected_cell {do new_residential("S");}} 
@@ -92,7 +91,6 @@ global {
 		if (action_type = 7) {ask selected_cell {do new_office("L");}} 
 		
 	}
->>>>>>> f364ce8b9ae96dc0d93927d7a9462030fd59d46d
 	
 	action initFromFile{
       matrix data <- matrix(my_csv_file);
@@ -118,8 +116,7 @@ species building {
 	list<people> inhabitants;
 	rgb color;
 	geometry bounds;
-	
-	
+
 	action initialize(cell the_cell, string the_type, string the_size) {
 		the_cell.my_building <- self;
 		type <- the_type;
@@ -199,11 +196,8 @@ grid cell width: 8 height: 8 {
 		create building returns: bds{
 			do initialize(myself, "residential", the_size);
 		}
-<<<<<<< HEAD
-		create people number: 100 {
-=======
 		create people number: nb_people_per_size[first(bds).size]{
->>>>>>> f364ce8b9ae96dc0d93927d7a9462030fd59d46d
+
 			origin <- first(bds);
 			dest <- one_of(offices);
 			origin.inhabitants << self;
