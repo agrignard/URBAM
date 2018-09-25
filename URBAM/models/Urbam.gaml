@@ -226,7 +226,7 @@ species people skills: [moving]{
 		do wander bounds: origin.bounds;
 	}
 	aspect default {
-		draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;
+		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
 	}
 }
 grid cell width: 8 height: 8 {
@@ -288,9 +288,9 @@ experiment city type: gui autorun: true{
 	output {
 		display map synchronized:true{
 			grid cell lines: #white;
-			species building;
 			species road;// aspect: edges_no_width;
 			species people;
+			species building;
 			event mouse_down action:build_buildings;   
 		}
 		
