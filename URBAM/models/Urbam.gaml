@@ -18,7 +18,7 @@ global {
 	list<building> offices;
 	
 	map<string,graph> graph_per_mode;
-	
+	file my_csv_file <- csv_file("../includes/nyc_grid.csv",",");
 	
 	init {
 		list<geometry> lines;
@@ -30,9 +30,23 @@ global {
 		graph_per_mode["pedestrian"] <- as_edge_graph(road);
 		graph_per_mode["walk"] <- as_edge_graph(road);
 		graph_per_mode["bike"] <-  as_edge_graph(road);
+		//do initFromFile;
 	}
 	
-	
+	action initFromFile{
+      matrix data <- matrix(my_csv_file);
+		loop i from: 1 to: data.rows -1{
+			loop j from: 0 to: data.columns -1{
+				if(data[j,i] != -1){
+					if(data[j,i] = 0){
+					  ask cell[j,i]{do new_residential;}	
+					}else{
+					 ask cell[j,i]{do new_office;}	
+					}
+				}
+			}	
+		}
+	}	
 }
 
 
@@ -89,12 +103,11 @@ species people skills: [moving]{
 			to_destination <- not to_destination;
 		}
 	}
-	reflex wander when: dest = nil {
-		
+	reflex wander when: dest = nil {	
 		do wander bounds: bounds;
 	}
 	aspect default {
-		draw triangle(1.0) color: color_per_mode[mobility_mode];
+		draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;
 	}
 }
 grid cell width: 8 height: 8 {
@@ -129,8 +142,9 @@ grid cell width: 8 height: 8 {
 }
 
 experiment city type: gui autorun: true{
+	float minimum_cycle_duration <- 0.05;
 	output {
-		display map {
+		display map synchronized:true{
 			grid cell lines: #white;
 			species building;
 			//species road;
