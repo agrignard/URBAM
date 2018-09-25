@@ -74,17 +74,10 @@ global {
 	}
 	
 	
-<<<<<<< HEAD
-//	reflex test_load_file when: every(100#cycle) and file_cpt < 4{
-//		do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
-//		file_cpt <- file_cpt+ 1;
-//	}
-=======
 	reflex test_load_file when: load_grid_file and every(100#cycle) and file_cpt < 4{
 		do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
 		file_cpt <- file_cpt+ 1;
 	}
->>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
 	
 
 	reflex compute_traffic_density{
@@ -190,12 +183,9 @@ species building {
 species road {
 	int traffic_density <- 0;
 	rgb color <- rnd_color(255);
-<<<<<<< HEAD
-	
-	
-=======
+
 	list<string> allowed_mobility <- ["walk","bike","car"];
->>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
+
 	aspect default {
 		if traffic_density = 0 {
 			draw shape color: #white;
@@ -204,11 +194,9 @@ species road {
 		}	
 	}
 	
-<<<<<<< HEAD
-		aspect edges_color {
-=======
-	aspect edges_no_width {
->>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
+	aspect edges_color {
+
+
 		if traffic_density = 0 {
 			draw shape color: #white;
 		}else{
@@ -225,18 +213,15 @@ species people skills: [moving]{
 	building dest;
 	bool to_destination <- true;
 	point target;
-<<<<<<< HEAD
-	point origin_point <- location;
-=======
+
 	
 	action reinit_destination {
 		dest <- empty(offices) ? nil : offices.keys[rnd_choice(offices.values)];
 		target <- nil;
 	}
->>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
+
 	reflex move when: dest != nil{
 		if (target = nil) {
-			origin_point <- location;
 			if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
 			else {target <- any_location_in(origin);}//centroid(origin);}
 		}
@@ -250,34 +235,20 @@ species people skills: [moving]{
 		do wander bounds: origin.bounds;
 	}
 	aspect default {
-<<<<<<< HEAD
-		draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;
-//		if current_path != nil{
+
+		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
+		//		if current_path != nil{
 //			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
 //			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
-//		}		
-=======
-		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
->>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
+//		}	
+
 	}
 }
 grid cell width: 8 height: 8 {
 	building my_building;
 	rgb color <- #lightgray;
 	action new_residential(string the_size) {
-<<<<<<< HEAD
-		if (my_building != nil) {ask my_building {do remove;}}
-		create building returns: bds{
-			do initialize(myself, "residential", the_size);
-		}
-		create people number: nb_people_per_size[first(bds).size]{
 
-			origin <- first(bds);
-			dest <- one_of(offices);
-			origin.inhabitants << self;
-			location <- any_location_in(origin.bounds);//centroid(origin.bounds);
-			
-=======
 		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
 			return;
 		} else {
@@ -291,7 +262,7 @@ grid cell width: 8 height: 8 {
 				location <- any_location_in(origin.bounds);
 				do reinit_destination;
 			}
->>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
+
 		}
 		
 	}
@@ -334,12 +305,7 @@ experiment city type: gui autorun: true{
 	output {
 		display map synchronized:true{
 			grid cell lines: #white;
-<<<<<<< HEAD
-			species building;
 			species road aspect: edges_color;
-=======
-			species road;// aspect: edges_no_width;
->>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
 			species people;
 			species building;
 			event mouse_down action:build_buildings;   
