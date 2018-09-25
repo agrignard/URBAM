@@ -12,6 +12,8 @@ global {
 	map<string,rgb> color_per_mode <- ["car"::#red, "bike"::#blue, "walk"::#green];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
 	map<string,float> nb_people_per_size <- ["S"::10.0, "M"::50.0, "L"::100.0];
+	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],
+		5::["office","M"],6::["office","L"]];
 	float weight_car <- 0.4;
 	float weight_walk <- 0.4;
 	float weight_bike <- 0.2;
@@ -20,8 +22,9 @@ global {
 	string imageFolder <- "../images/";
 	int action_type;
 	
+	int file_cpt <- 1;
+	
 	map<string,graph> graph_per_mode;
-	file my_csv_file <- csv_file("../includes/nyc_grid.csv",",");
 	
 	//image des boutons
 	list<file> images <- [
@@ -44,7 +47,6 @@ global {
 		graph_per_mode["bike"] <-  as_edge_graph(road);
 		
 		do init_buttons;
-		//do initFromFile;
 		
 	}
 	
@@ -65,6 +67,12 @@ global {
 			bord_col<-#red;
 		}
 		write action_type;
+	}
+	
+	
+	reflex test_load_file when: every(100#cycle) and file_cpt < 4{
+		do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
+		file_cpt <- file_cpt+ 1;
 	}
 	
 
@@ -93,21 +101,35 @@ global {
 		
 	}
 	
-	action initFromFile{
-      matrix data <- matrix(my_csv_file);
-		loop i from: 1 to: data.rows -1{
-			loop j from: 0 to: data.columns -1{
-				if(data[j,i] != -1){
-					if(data[j,i] = 0){
-					  ask cell[j,i]{do new_residential("S");}	
-					}else{
-					 ask cell[j,i]{do new_office("S");}	
+	action load_matrix(string path_to_file) {
+		file my_csv_file <- csv_file(path_to_file,",");
+		matrix data <- matrix(my_csv_file);
+		loop i from: 0 to: data.rows - 1 {
+			loop j from: 0 to: data.columns - 1 {
+				if (data[j, i] != -1) {
+					int id <- int(data[j, i]);
+					if (id > 0) {
+						list<string> types <- id_to_building_type[id];
+						string type <- types[0];
+						string size <- types[1];
+						cell current_cell <- cell[j,i];
+						bool new_building <- true;
+						if (current_cell.my_building != nil) {
+							building build <- current_cell.my_building;
+							new_building <- (build.type != type) or (build.size != size);
+						}
+						if (new_building) {
+							if (type = "residential") {
+								ask current_cell {do new_residential(size);}
+							} else if (type = "office") {
+								ask current_cell {do new_office(size);}
+							}
+						}
 					}
 				}
-			}	
+			}
 		}
 	}
-
 }
 
 
