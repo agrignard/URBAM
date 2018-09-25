@@ -13,28 +13,32 @@ global {
 	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
 	map<string,float> nb_people_per_size <- ["S"::10.0, "M"::50.0, "L"::100.0];
+	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],
 		5::["office","M"],6::["office","L"]];
 	float weight_car <- 0.4;
 	float weight_walk <- 0.4;
 	float weight_bike <- 0.2;
 	list<building> residentials;
-	list<building> offices;
+	map<building, float> offices;
 	string imageFolder <- "../images/";
 	int action_type;
-	
+
 	int file_cpt <- 1;
-	
+	bool load_grid_file <- false;
 	map<string,graph> graph_per_mode;
 	
 	//image des boutons
 	list<file> images <- [
 		file(imageFolder +"residential_S.png"),
 		file(imageFolder +"office_S.png"),
+		file(imageFolder +"eraser.png"),
 		file(imageFolder +"residential_M.png"),
 		file(imageFolder +"office_M.png"),
+		file(imageFolder +"road.png"),
 		file(imageFolder +"residential_L.png"),
-		file(imageFolder +"office_L.png")
+		file(imageFolder +"office_L.png"),
+		file(imageFolder +"empty.png")
 	]; 
 	init {
 		list<geometry> lines;
@@ -43,9 +47,9 @@ global {
 		}
 		geometry global_line <- union(lines);
 		create road from: split_lines(global_line);
-		graph_per_mode["pedestrian"] <- as_edge_graph(road);
-		graph_per_mode["walk"] <- as_edge_graph(road);
-		graph_per_mode["bike"] <-  as_edge_graph(road);
+		loop mode over: ["walk", "car", "bike"] {
+			graph_per_mode[mode] <- as_edge_graph(road where (mode in each.allowed_mobility));
+		}
 		
 		do init_buttons;
 		
@@ -67,14 +71,20 @@ global {
 			action_type<-action_nb;
 			bord_col<-#red;
 		}
-		write action_type;
 	}
 	
 	
+<<<<<<< HEAD
 //	reflex test_load_file when: every(100#cycle) and file_cpt < 4{
 //		do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
 //		file_cpt <- file_cpt+ 1;
 //	}
+=======
+	reflex test_load_file when: load_grid_file and every(100#cycle) and file_cpt < 4{
+		do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
+		file_cpt <- file_cpt+ 1;
+	}
+>>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
 	
 
 	reflex compute_traffic_density{
@@ -93,12 +103,13 @@ global {
 	
 	action build_buildings {
 		cell selected_cell <- first(cell overlapping (circle(1) at_location #user_location));
-		if (action_type = 2) {ask selected_cell {do new_residential("S");}} 
-		if (action_type = 4) {ask selected_cell {do new_residential("M");}} 
-		if (action_type = 6) {ask selected_cell {do new_residential("L");}} 
-		if (action_type = 3) {ask selected_cell {do new_office("S");}} 
-		if (action_type = 5) {ask selected_cell {do new_office("M");}} 
-		if (action_type = 7) {ask selected_cell {do new_office("L");}} 
+		if (action_type = 3) {ask selected_cell {do new_residential("S");}} 
+		if (action_type = 4) {ask selected_cell {do new_office("S");}} 
+		if (action_type = 5) {ask selected_cell {do erase_building;}} 
+		if (action_type = 6) {ask selected_cell {do new_residential("M");}} 
+		if (action_type = 7) {ask selected_cell {do new_office("M");}} 
+		if (action_type = 9) {ask selected_cell {do new_residential("L");}} 
+		if (action_type = 10) {ask selected_cell {do new_office("L");}} 
 		
 	}
 	
@@ -148,15 +159,24 @@ species building {
 		do define_color;
 		shape <- the_cell.shape scaled_by 0.7;
 		if (type = "residential") {residentials << self;}
-		else if (type = "office") {offices << self;}
+		else if (type = "office") {
+			offices[self] <- proba_choose_per_size[size];
+		}
 		bounds <- the_cell.shape + 0.5 - shape;
 			
 	}
 	action remove {
-		offices >> self;
-		ask inhabitants {
-			do die;
+		if (type = "office") {
+			offices[] >- self;
+			ask people {
+				do reinit_destination;
+			}
+		} else {
+			ask inhabitants {
+				do die;
+			}
 		}
+		cell(location).my_building <- nil;
 		do die;
 	}
 	action define_color {
@@ -170,8 +190,12 @@ species building {
 species road {
 	int traffic_density <- 0;
 	rgb color <- rnd_color(255);
+<<<<<<< HEAD
 	
 	
+=======
+	list<string> allowed_mobility <- ["walk","bike","car"];
+>>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
 	aspect default {
 		if traffic_density = 0 {
 			draw shape color: #white;
@@ -180,7 +204,11 @@ species road {
 		}	
 	}
 	
+<<<<<<< HEAD
 		aspect edges_color {
+=======
+	aspect edges_no_width {
+>>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
 		if traffic_density = 0 {
 			draw shape color: #white;
 		}else{
@@ -197,7 +225,15 @@ species people skills: [moving]{
 	building dest;
 	bool to_destination <- true;
 	point target;
+<<<<<<< HEAD
 	point origin_point <- location;
+=======
+	
+	action reinit_destination {
+		dest <- empty(offices) ? nil : offices.keys[rnd_choice(offices.values)];
+		target <- nil;
+	}
+>>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
 	reflex move when: dest != nil{
 		if (target = nil) {
 			origin_point <- location;
@@ -214,17 +250,22 @@ species people skills: [moving]{
 		do wander bounds: origin.bounds;
 	}
 	aspect default {
+<<<<<<< HEAD
 		draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;
 //		if current_path != nil{
 //			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
 //			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
 //		}		
+=======
+		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
+>>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
 	}
 }
 grid cell width: 8 height: 8 {
 	building my_building;
 	rgb color <- #lightgray;
 	action new_residential(string the_size) {
+<<<<<<< HEAD
 		if (my_building != nil) {ask my_building {do remove;}}
 		create building returns: bds{
 			do initialize(myself, "residential", the_size);
@@ -236,32 +277,54 @@ grid cell width: 8 height: 8 {
 			origin.inhabitants << self;
 			location <- any_location_in(origin.bounds);//centroid(origin.bounds);
 			
+=======
+		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
+			return;
+		} else {
+			if (my_building != nil ) {ask my_building {do remove;}}
+			create building returns: bds{
+				do initialize(myself, "residential", the_size);
+			}
+			create people number: nb_people_per_size[first(bds).size]{
+				origin <- first(bds);
+				origin.inhabitants << self;
+				location <- any_location_in(origin.bounds);
+				do reinit_destination;
+			}
+>>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
 		}
+		
 	}
 	action new_office (string the_size) {
+		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
+			return;
+		} else {
+			if (my_building != nil) {ask my_building {do remove;}}
+			create building returns: bds{
+				do initialize(myself, "office",the_size);
+			}
+			ask people {
+				do reinit_destination;
+			}
+		}
+	}
+	action erase_building {
 		if (my_building != nil) {ask my_building {do remove;}}
-		create building returns: bds{
-			do initialize(myself, "office",the_size);
-		}
-		ask people {
-			dest <- one_of(offices);
-		}
 	}
 
 }
 
-grid button width:2 height:4 
+grid button width:3 height:4 
 {
 	int action_nb;
-	float img_h <-world.shape.height/8;
-	float img_l <-world.shape.width/4;
 	rgb bord_col<-#black;
 	aspect normal {
-		if (action_nb > 1) {draw rectangle(shape.width * 0.8,shape.height * 0.8).contour + 0.5 color: bord_col;}
+		if (action_nb > 2 and not (action_nb in [11])) {draw rectangle(shape.width * 0.8,shape.height * 0.8).contour + 0.5 color: bord_col;}
 		if (action_nb = 0) {draw "Build residential building"  color:#black font:font("SansSerif", 16, #bold) at: location - {15,-10.0,0};}
 		else if (action_nb = 1) {draw "Build office building"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
+		else if (action_nb = 2) {draw "Tools"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
 		else {
-			draw image_file(images[action_nb - 2]) size:{shape.width * 0.7,shape.height * 0.7} ;
+			draw image_file(images[action_nb - 3]) size:{shape.width * 0.7,shape.height * 0.7} ;
 		}
 	}
 }
@@ -271,9 +334,14 @@ experiment city type: gui autorun: true{
 	output {
 		display map synchronized:true{
 			grid cell lines: #white;
+<<<<<<< HEAD
 			species building;
 			species road aspect: edges_color;
+=======
+			species road;// aspect: edges_no_width;
+>>>>>>> a8bcd73313e38fa0db78773ea4de1949e980c745
 			species people;
+			species building;
 			event mouse_down action:build_buildings;   
 		}
 		
