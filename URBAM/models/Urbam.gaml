@@ -47,12 +47,15 @@ global {
 		}
 		geometry global_line <- union(lines);
 		create road from: split_lines(global_line);
+		do update_graphs;
+		do init_buttons;
+		
+	}
+	
+	action update_graphs {
 		loop mode over: ["walk", "car", "bike"] {
 			graph_per_mode[mode] <- as_edge_graph(road where (mode in each.allowed_mobility));
 		}
-		
-		do init_buttons;
-		
 	}
 	
 	action init_buttons	{
@@ -94,6 +97,41 @@ global {
 		}
 	}
 	
+	
+	action infrastructure_management {
+		if (action_type = 8) {
+			do manage_road;
+		} else {
+			do build_buildings;
+		}
+		
+	}
+	
+	
+	action manage_road{
+		road selected_road <- first(road overlapping (circle(1) at_location #user_location));
+		bool with_car <- "car" in selected_road.allowed_mobility;
+		bool with_bike <- "bike" in selected_road.allowed_mobility;
+		bool with_pedestrian <- "walk" in selected_road.allowed_mobility;
+		map input_values <- user_input(["car allowed"::with_car,"bike allowed"::with_bike,"pedestrian allowed"::with_pedestrian]);
+		if (with_car != input_values["car allowed"]) {
+			if (with_car) {selected_road.allowed_mobility >> "car";}
+			else {selected_road.allowed_mobility << "car";}
+			
+		}
+		if (with_bike != input_values["bike allowed"]) {
+			if (with_bike) {selected_road.allowed_mobility >> "bike";}
+			else {selected_road.allowed_mobility << "bike";}
+		}
+		if (with_pedestrian != input_values["pedestrian allowed"]) {
+			if (with_pedestrian) {selected_road.allowed_mobility >> "walk";}
+			else {selected_road.allowed_mobility << "walk";}
+		}
+		
+		do update_graphs;
+		
+	}
+	
 	action build_buildings {
 		cell selected_cell <- first(cell overlapping (circle(1) at_location #user_location));
 		if (action_type = 3) {ask selected_cell {do new_residential("S");}} 
@@ -106,6 +144,7 @@ global {
 		
 	}
 	
+	 
 	action load_matrix(string path_to_file) {
 		file my_csv_file <- csv_file(path_to_file,",");
 		matrix data <- matrix(my_csv_file);
@@ -194,6 +233,18 @@ species road {
 		}	
 	}
 	
+	aspect road_type {
+		if ("car" in allowed_mobility) {
+			draw shape + 0.5 color:color_per_mode["car"];
+		}
+		if ("bike" in allowed_mobility) {
+			draw shape + 0.25 color:color_per_mode["bike"];
+		}
+		if ("walk" in allowed_mobility) {
+			draw shape + 0.1 color:color_per_mode["walk"];
+		}
+	}
+	
 	aspect edges_color {
 
 
@@ -219,16 +270,21 @@ species people skills: [moving]{
 		dest <- empty(offices) ? nil : offices.keys[rnd_choice(offices.values)];
 		target <- nil;
 	}
+	
+	action update_target {
+		if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
+		else {target <- any_location_in(origin);}//centroid(origin);}
+	}
 
 	reflex move when: dest != nil{
 		if (target = nil) {
-			if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
-			else {target <- any_location_in(origin);}//centroid(origin);}
+			do update_target;
 		}
 		do goto target: target on: graph_per_mode[mobility_mode];
 		if (target = location) {
 			target <- nil;
 			to_destination <- not to_destination;
+			do update_target;
 		}
 	}
 	reflex wander when: dest = nil {
@@ -305,13 +361,14 @@ grid button width:3 height:4
 
 experiment city type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
+	permanent layout: horizontal([0::7131,1::2869]) tabs:true;
 	output {
 		display map synchronized:true{
 			grid cell lines: #white;
-			species road aspect: edges_color;
+			species road ;
 			species people;
 			species building;
-			event mouse_down action:build_buildings;   
+			event mouse_down action:infrastructure_management;  
 		}
 		
 			//Bouton d'action
