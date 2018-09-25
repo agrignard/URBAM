@@ -14,21 +14,41 @@ global {
 	float weight_car <- 0.4;
 	float weight_walk <- 0.4;
 	float weight_bike <- 0.2;
+	list<cell> residentials;
+	list<cell> offices;
+	
+	
 }
 
 species people {
 	string moblity_mode <- "walk"; 
+	cell origine;
+	cell destination;
 	aspect default {
 		draw triangle(1.0) color: color_per_mode[moblity_mode];
 	}
 }
-grid cell width: 20 height: 20 {
+grid cell width: 8 height: 8 {
 	string type <- "empty";
 	rgb color <- color_per_type[type];
-	user_command to_residential {
+	action new_residential {
+		residentials << self;
 		type <- "residential";
 		color <- color_per_type[type];
+		create people number: 10 {
+			origine <- myself;
+			location <- any_location_in(myself);
+			destination <- one_of(offices);
+		}
 	}
+	action new_office {
+		type <- "office";
+		color <- color_per_type[type];
+		offices << self;
+	}
+	
+	user_command to_residential action: new_residential;
+	user_command to_office action: new_office;
 }
 
 experiment city type: gui {
