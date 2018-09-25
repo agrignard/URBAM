@@ -31,10 +31,13 @@ global {
 	list<file> images <- [
 		file(imageFolder +"residential_S.png"),
 		file(imageFolder +"office_S.png"),
+		file(imageFolder +"eraser.png"),
 		file(imageFolder +"residential_M.png"),
 		file(imageFolder +"office_M.png"),
+		file(imageFolder +"empty.png"),
 		file(imageFolder +"residential_L.png"),
-		file(imageFolder +"office_L.png")
+		file(imageFolder +"office_L.png"),
+		file(imageFolder +"empty.png")
 	]; 
 	init {
 		list<geometry> lines;
@@ -93,12 +96,13 @@ global {
 	
 	action build_buildings {
 		cell selected_cell <- first(cell overlapping (circle(1) at_location #user_location));
-		if (action_type = 2) {ask selected_cell {do new_residential("S");}} 
-		if (action_type = 4) {ask selected_cell {do new_residential("M");}} 
-		if (action_type = 6) {ask selected_cell {do new_residential("L");}} 
-		if (action_type = 3) {ask selected_cell {do new_office("S");}} 
-		if (action_type = 5) {ask selected_cell {do new_office("M");}} 
-		if (action_type = 7) {ask selected_cell {do new_office("L");}} 
+		if (action_type = 3) {ask selected_cell {do new_residential("S");}} 
+		if (action_type = 4) {ask selected_cell {do new_office("S");}} 
+		if (action_type = 5) {ask selected_cell {do erase_building;}} 
+		if (action_type = 6) {ask selected_cell {do new_residential("M");}} 
+		if (action_type = 7) {ask selected_cell {do new_office("M");}} 
+		if (action_type = 9) {ask selected_cell {do new_residential("L");}} 
+		if (action_type = 10) {ask selected_cell {do new_office("L");}} 
 		
 	}
 	
@@ -165,6 +169,7 @@ species building {
 				do die;
 			}
 		}
+		cell(location).my_building <- nil;
 		do die;
 	}
 	action define_color {
@@ -258,21 +263,23 @@ grid cell width: 8 height: 8 {
 			}
 		}
 	}
+	action erase_building {
+		if (my_building != nil) {ask my_building {do remove;}}
+	}
 
 }
 
-grid button width:2 height:4 
+grid button width:3 height:4 
 {
 	int action_nb;
-	float img_h <-world.shape.height/8;
-	float img_l <-world.shape.width/4;
 	rgb bord_col<-#black;
 	aspect normal {
-		if (action_nb > 1) {draw rectangle(shape.width * 0.8,shape.height * 0.8).contour + 0.5 color: bord_col;}
+		if (action_nb > 2 and not (action_nb in [8,11])) {draw rectangle(shape.width * 0.8,shape.height * 0.8).contour + 0.5 color: bord_col;}
 		if (action_nb = 0) {draw "Build residential building"  color:#black font:font("SansSerif", 16, #bold) at: location - {15,-10.0,0};}
 		else if (action_nb = 1) {draw "Build office building"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
+		else if (action_nb = 2) {draw "Tools"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
 		else {
-			draw image_file(images[action_nb - 2]) size:{shape.width * 0.7,shape.height * 0.7} ;
+			draw image_file(images[action_nb - 3]) size:{shape.width * 0.7,shape.height * 0.7} ;
 		}
 	}
 }
