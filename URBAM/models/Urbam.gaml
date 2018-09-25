@@ -72,8 +72,8 @@ global {
 		ask road {traffic_density <- 0;}
 		ask people{
 			if current_path != nil{
-				ask current_path.edges{
-					(self as road).traffic_density  <- (self as road).traffic_density + 1;
+				ask list<road>(current_path.edges){
+					traffic_density  <- (self as road).traffic_density + 1;
 				}
 			}
 //			if current_edge != nil{
