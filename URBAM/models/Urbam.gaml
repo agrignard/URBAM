@@ -358,7 +358,7 @@ grid button width:3 height:4
 
 experiment city type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
-	permanent layout: horizontal([0::7131,1::2869]) tabs:true;
+	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
 		display map synchronized:true{
 			grid cell lines: #white;
