@@ -10,6 +10,7 @@ model Urbam
 
 global {
 	map<string,rgb> color_per_mode <- ["car"::#red, "bike"::#blue, "walk"::#green];
+	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
 	map<string,float> nb_people_per_size <- ["S"::10.0, "M"::50.0, "L"::100.0];
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
@@ -221,7 +222,9 @@ species building {
 species road {
 	int traffic_density <- 0;
 	rgb color <- rnd_color(255);
+
 	list<string> allowed_mobility <- ["walk","bike","car"];
+
 	aspect default {
 		if traffic_density = 0 {
 			draw shape color: #white;
@@ -242,11 +245,15 @@ species road {
 		}
 	}
 	
-	aspect edges_no_width {
+	aspect edges_color {
+
+
 		if traffic_density = 0 {
 			draw shape color: #white;
 		}else{
-			draw shape + 0.3 color: rgb(52,152,219);
+			float scale <- min([1,traffic_density / 100])^2;
+			//draw shape + 0.3 color: rgb([52+(231-52)*scale,152+(76-152)*scale,219+(60-219)*scale]);
+			draw shape + 0.3 color: colormap_per_mode["car"][int(4*scale)];
 		}	
 	}
 	
@@ -257,15 +264,17 @@ species people skills: [moving]{
 	building dest;
 	bool to_destination <- true;
 	point target;
+
 	
 	action reinit_destination {
 		dest <- empty(offices) ? nil : offices.keys[rnd_choice(offices.values)];
 		target <- nil;
 	}
+
 	reflex move when: dest != nil{
 		if (target = nil) {
-			if (to_destination) {target <- any_location_in(dest);}
-			else {target <- any_location_in(origin);}
+			if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
+			else {target <- any_location_in(origin);}//centroid(origin);}
 		}
 		do goto target: target on: graph_per_mode[mobility_mode];
 		if (target = location) {
@@ -277,13 +286,20 @@ species people skills: [moving]{
 		do wander bounds: origin.bounds;
 	}
 	aspect default {
+
 		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
+		//		if current_path != nil{
+//			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
+//			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
+//		}	
+
 	}
 }
 grid cell width: 8 height: 8 {
 	building my_building;
 	rgb color <- #lightgray;
 	action new_residential(string the_size) {
+
 		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
 			return;
 		} else {
@@ -297,6 +313,7 @@ grid cell width: 8 height: 8 {
 				location <- any_location_in(origin.bounds);
 				do reinit_destination;
 			}
+
 		}
 		
 	}
@@ -339,7 +356,7 @@ experiment city type: gui autorun: true{
 	output {
 		display map synchronized:true{
 			grid cell lines: #white;
-			species road aspect: road_type;// aspect: edges_no_width;
+			species road aspect: edges_color;
 			species people;
 			species building;
 			event mouse_down action:infrastructure_management;  
