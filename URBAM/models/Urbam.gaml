@@ -34,7 +34,7 @@ global {
 		file(imageFolder +"eraser.png"),
 		file(imageFolder +"residential_M.png"),
 		file(imageFolder +"office_M.png"),
-		file(imageFolder +"empty.png"),
+		file(imageFolder +"road.png"),
 		file(imageFolder +"residential_L.png"),
 		file(imageFolder +"office_L.png"),
 		file(imageFolder +"empty.png")
@@ -46,9 +46,9 @@ global {
 		}
 		geometry global_line <- union(lines);
 		create road from: split_lines(global_line);
-		graph_per_mode["pedestrian"] <- as_edge_graph(road);
-		graph_per_mode["walk"] <- as_edge_graph(road);
-		graph_per_mode["bike"] <-  as_edge_graph(road);
+		loop mode over: ["walk", "car", "bike"] {
+			graph_per_mode[mode] <- as_edge_graph(road where (mode in each.allowed_mobility));
+		}
 		
 		do init_buttons;
 		
@@ -70,7 +70,6 @@ global {
 			action_type<-action_nb;
 			bord_col<-#red;
 		}
-		write action_type;
 	}
 	
 	
@@ -183,7 +182,7 @@ species building {
 species road {
 	int traffic_density <- 0;
 	rgb color <- rnd_color(255);
-	
+	list<string> allowed_mobility <- ["walk","bike","car"];
 	aspect default {
 		if traffic_density = 0 {
 			draw shape color: #white;
@@ -274,7 +273,7 @@ grid button width:3 height:4
 	int action_nb;
 	rgb bord_col<-#black;
 	aspect normal {
-		if (action_nb > 2 and not (action_nb in [8,11])) {draw rectangle(shape.width * 0.8,shape.height * 0.8).contour + 0.5 color: bord_col;}
+		if (action_nb > 2 and not (action_nb in [11])) {draw rectangle(shape.width * 0.8,shape.height * 0.8).contour + 0.5 color: bord_col;}
 		if (action_nb = 0) {draw "Build residential building"  color:#black font:font("SansSerif", 16, #bold) at: location - {15,-10.0,0};}
 		else if (action_nb = 1) {draw "Build office building"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
 		else if (action_nb = 2) {draw "Tools"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
