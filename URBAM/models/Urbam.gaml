@@ -20,8 +20,8 @@ global {
 	string imageFolder <- "../images/";
 	int action_type;
 	
-	
 	map<string,graph> graph_per_mode;
+	file my_csv_file <- csv_file("../includes/nyc_grid.csv",",");
 	
 	//image des boutons
 	list<file> images <- [
@@ -76,6 +76,22 @@ global {
 		if (action_type = 7) {ask selected_cell {do new_office("L");}} 
 		
 	}
+	
+	action initFromFile{
+      matrix data <- matrix(my_csv_file);
+		loop i from: 1 to: data.rows -1{
+			loop j from: 0 to: data.columns -1{
+				if(data[j,i] != -1){
+					if(data[j,i] = 0){
+					  ask cell[j,i]{do new_residential;}	
+					}else{
+					 ask cell[j,i]{do new_office;}	
+					}
+				}
+			}	
+		}
+	}
+
 }
 
 
@@ -139,7 +155,7 @@ species people skills: [moving]{
 		do wander bounds: origin.bounds;
 	}
 	aspect default {
-		draw triangle(1.0) color: color_per_mode[mobility_mode];
+		draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;
 	}
 }
 grid cell width: 8 height: 8 {
@@ -187,8 +203,9 @@ grid button width:2 height:4
 }
 
 experiment city type: gui autorun: true{
+	float minimum_cycle_duration <- 0.05;
 	output {
-		display map {
+		display map synchronized:true{
 			grid cell lines: #white;
 			species building;
 			//species road;
