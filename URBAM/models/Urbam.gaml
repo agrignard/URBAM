@@ -12,18 +12,19 @@ global {
 	map<string,rgb> color_per_mode <- ["car"::#red, "bike"::#blue, "walk"::#green];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
 	map<string,float> nb_people_per_size <- ["S"::10.0, "M"::50.0, "L"::100.0];
+	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],
 		5::["office","M"],6::["office","L"]];
 	float weight_car <- 0.4;
 	float weight_walk <- 0.4;
 	float weight_bike <- 0.2;
 	list<building> residentials;
-	list<building> offices;
+	map<building, float> offices;
 	string imageFolder <- "../images/";
 	int action_type;
-	
+
 	int file_cpt <- 1;
-	
+	bool load_grid_file <- false;
 	map<string,graph> graph_per_mode;
 	
 	//image des boutons
@@ -70,7 +71,7 @@ global {
 	}
 	
 	
-	reflex test_load_file when: every(100#cycle) and file_cpt < 4{
+	reflex test_load_file when: load_grid_file and every(100#cycle) and file_cpt < 4{
 		do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
 		file_cpt <- file_cpt+ 1;
 	}
@@ -147,14 +148,22 @@ species building {
 		do define_color;
 		shape <- the_cell.shape scaled_by 0.7;
 		if (type = "residential") {residentials << self;}
-		else if (type = "office") {offices << self;}
+		else if (type = "office") {
+			offices[self] <- proba_choose_per_size[size];
+		}
 		bounds <- the_cell.shape + 0.5 - shape;
 			
 	}
 	action remove {
-		offices >> self;
-		ask inhabitants {
-			do die;
+		if (type = "office") {
+			offices[] >- self;
+			ask people {
+				do reinit_destination;
+			}
+		} else {
+			ask inhabitants {
+				do die;
+			}
 		}
 		do die;
 	}
@@ -178,7 +187,7 @@ species road {
 		}	
 	}
 	
-		aspect edges_no_width {
+	aspect edges_no_width {
 		if traffic_density = 0 {
 			draw shape color: #white;
 		}else{
@@ -193,6 +202,11 @@ species people skills: [moving]{
 	building dest;
 	bool to_destination <- true;
 	point target;
+	
+	action reinit_destination {
+		dest <- empty(offices) ? nil : offices.keys[rnd_choice(offices.values)];
+		target <- nil;
+	}
 	reflex move when: dest != nil{
 		if (target = nil) {
 			if (to_destination) {target <- any_location_in(dest);}
@@ -215,26 +229,33 @@ grid cell width: 8 height: 8 {
 	building my_building;
 	rgb color <- #lightgray;
 	action new_residential(string the_size) {
-		if (my_building != nil) {ask my_building {do remove;}}
-		create building returns: bds{
-			do initialize(myself, "residential", the_size);
+		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
+			return;
+		} else {
+			if (my_building != nil ) {ask my_building {do remove;}}
+			create building returns: bds{
+				do initialize(myself, "residential", the_size);
+			}
+			create people number: nb_people_per_size[first(bds).size]{
+				origin <- first(bds);
+				origin.inhabitants << self;
+				location <- any_location_in(origin.bounds);
+				do reinit_destination;
+			}
 		}
-		create people number: nb_people_per_size[first(bds).size]{
-
-			origin <- first(bds);
-			dest <- one_of(offices);
-			origin.inhabitants << self;
-			location <- any_location_in(origin.bounds);
-			
-		}
+		
 	}
 	action new_office (string the_size) {
-		if (my_building != nil) {ask my_building {do remove;}}
-		create building returns: bds{
-			do initialize(myself, "office",the_size);
-		}
-		ask people {
-			dest <- one_of(offices);
+		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
+			return;
+		} else {
+			if (my_building != nil) {ask my_building {do remove;}}
+			create building returns: bds{
+				do initialize(myself, "office",the_size);
+			}
+			ask people {
+				do reinit_destination;
+			}
 		}
 	}
 
