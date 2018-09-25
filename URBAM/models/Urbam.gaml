@@ -270,16 +270,21 @@ species people skills: [moving]{
 		dest <- empty(offices) ? nil : offices.keys[rnd_choice(offices.values)];
 		target <- nil;
 	}
+	
+	action update_target {
+		if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
+		else {target <- any_location_in(origin);}//centroid(origin);}
+	}
 
 	reflex move when: dest != nil{
 		if (target = nil) {
-			if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
-			else {target <- any_location_in(origin);}//centroid(origin);}
+			do update_target;
 		}
 		do goto target: target on: graph_per_mode[mobility_mode];
 		if (target = location) {
 			target <- nil;
 			to_destination <- not to_destination;
+			do update_target;
 		}
 	}
 	reflex wander when: dest = nil {
@@ -356,7 +361,7 @@ experiment city type: gui autorun: true{
 	output {
 		display map synchronized:true{
 			grid cell lines: #white;
-			species road aspect: edges_color;
+			species road ;
 			species people;
 			species building;
 			event mouse_down action:infrastructure_management;  
