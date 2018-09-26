@@ -9,6 +9,10 @@ model Urbam
 
 
 global {
+	//PARAMETERS
+	string road_aspect <- "default";
+	
+	float scale_factor;
 	
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
@@ -60,6 +64,7 @@ global {
 		do update_graphs;
 		do init_buttons;
 		do load_profiles;
+		scale_factor <- min([first(cell).shape.width,first(cell).shape.height])/40;
 	}
 	
 	action load_profiles {
@@ -249,36 +254,37 @@ species road {
 	list<string> allowed_mobility <- ["walk","bike","car"];
 
 	aspect default {
-		if traffic_density = 0 {
-			draw shape color: #white;
-		}else{
-			draw shape + traffic_density/150 color: rgb(52,152,219);
+		switch road_aspect {
+			match "default" {
+				if traffic_density = 0 {
+					draw shape color: #white;
+				}else{
+					draw shape + scale_factor*traffic_density/50 color: rgb(52,152,219);
+				}	
+			}	
+			match "road type" {
+				if ("car" in allowed_mobility) {
+					draw shape + scale_factor color:color_per_mode["car"];
+				}
+				if ("bike" in allowed_mobility) {
+					draw shape + 0.5*scale_factor color:color_per_mode["bike"];
+				}
+				if ("walk" in allowed_mobility) {
+					draw shape + 0.2*scale_factor color:color_per_mode["walk"];
+				}
+			}
+			match "edge color"{		
+				if traffic_density = 0 {
+					draw shape color: #white;
+				}else{
+					float scale <- min([1,traffic_density / 100])^2;
+					//draw shape + 0.3 color: rgb([52+(231-52)*scale,152+(76-152)*scale,219+(60-219)*scale]);
+					draw shape + scale_factor color: colormap_per_mode["car"][int(4*scale)];
+				}	
+			}			
 		}	
 	}
-	
-	aspect road_type {
-		if ("car" in allowed_mobility) {
-			draw shape + 0.5 color:color_per_mode["car"];
-		}
-		if ("bike" in allowed_mobility) {
-			draw shape + 0.25 color:color_per_mode["bike"];
-		}
-		if ("walk" in allowed_mobility) {
-			draw shape + 0.1 color:color_per_mode["walk"];
-		}
-	}
-	
-	aspect edges_color {
 
-
-		if traffic_density = 0 {
-			draw shape color: #white;
-		}else{
-			float scale <- min([1,traffic_density / 100])^2;
-			//draw shape + 0.3 color: rgb([52+(231-52)*scale,152+(76-152)*scale,219+(60-219)*scale]);
-			draw shape + 0.3 color: colormap_per_mode["car"][int(4*scale)];
-		}	
-	}
 	
 }
 
@@ -415,6 +421,7 @@ grid button width:3 height:4
 }
 
 experiment city type: gui autorun: true{
+	parameter 'Roads aspect:' var: road_aspect category: 'Aspect' <-"edge color" among:["default", "hide","road type","edge color"];
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
