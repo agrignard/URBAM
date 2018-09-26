@@ -47,7 +47,7 @@ global {
 	bool traffic_jam <- true parameter: true;
 	
 	geometry shape <- envelope(nyc_bounds0_shape_file);
-	float step <- sqrt(shape.area) /500.0 ;
+	float step <- sqrt(shape.area) /2000.0 ;
 	
 	map<string,list<float>> speed_per_mobility <- ["car"::[20.0,40.0], "bike"::[5.0,15.0], "walk"::[3.0,7.0]];
 	
