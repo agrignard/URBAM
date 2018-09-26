@@ -23,11 +23,17 @@ global {
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
 	
+
+	//kml kml_export;
+	bool expert_to_kml <- false;
+	int nb_cycles_between_save <- 50;
+	int cycle_to_export <- 500;
 	
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n
-	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90)];
+	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
 	
 	
+	map<string,int> offsets <- ["car"::0, "bike"::-1, "walk"::1, "pev"::-1];
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
 	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
@@ -35,9 +41,14 @@ global {
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],
 		5::["office","M"],6::["office","L"]];
-	float weight_car <- 0.4;
-	float weight_walk <- 0.4;
-	float weight_bike <- 0.2;
+	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
+	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
+	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" ;
+	
+	float weight_car_prev <- weight_car;
+	float weight_bike_prev <- weight_bike;
+	float weight_pev_prev <- weight_pev;
+	
 	list<building> residentials;
 	map<building, float> offices;
 	string imageFolder <- "../images/";
@@ -55,7 +66,7 @@ global {
 	geometry shape <- envelope(nyc_bounds0_shape_file);
 	float step <- sqrt(shape.area) /2000.0 ;
 	
-	map<string,list<float>> speed_per_mobility <- ["car"::[20.0,40.0], "bike"::[5.0,15.0], "walk"::[3.0,7.0]];
+	map<string,list<float>> speed_per_mobility <- ["car"::[20.0,40.0], "bike"::[5.0,15.0], "walk"::[3.0,7.0], "pev"::[15.0,30.0]];
 	
 	//image des boutons
 	list<file> images <- [
@@ -86,7 +97,7 @@ global {
 	
 	action load_profiles {
 		create profile from: csv_file(profile_file,";", true) with: [proportionS::float(get("proportionS")),proportionM::float(get("proportionM")),proportionL::float(get("proportionL")),
-			name::string(get("typo")), max_dist_walk::float(get("max_dist_walk")),max_dist_bike::float(get("max_dist_bike"))
+			name::string(get("typo")), max_dist_walk::float(get("max_dist_walk")),max_dist_bike::float(get("max_dist_bike")),max_dist_pev::float(get("max_dist_pev"))
 		];
 		ask profile {
 			map<profile, float> prof_pro1 <- proportions_per_bd_type["S"];
@@ -122,6 +133,23 @@ global {
 	}
 	
 	
+	reflex update_mobility  {
+		if(weight_car_prev != weight_car) or (weight_bike_prev != weight_bike) or (weight_pev_prev != weight_pev) {
+			ask people {
+				know_pev <- flip(weight_pev);
+				has_car <- flip(weight_car);
+				has_bike <- flip(weight_bike);
+				
+				do choose_mobility;
+				do mobility;
+			}
+		}
+		weight_car_prev <- weight_car;
+		weight_bike_prev <- weight_bike;
+		weight_pev_prev <-weight_pev;
+		
+	}
+	
 	reflex test_load_file when: load_grid_file and every(100#cycle) and file_cpt < 4{
 		do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
 		file_cpt <- file_cpt+ 1;
@@ -139,15 +167,34 @@ global {
 	
 
 	reflex compute_traffic_density{
-		ask road {traffic_density <- ["car"::[0::0], "bike"::[0::0], "walk"::[0::0]];}
+		ask road {traffic_density <- ["car"::[0::0], "bike"::[0::0], "walk"::[0::0], "pev"::[0::0]];}
+
 		ask people{
-			if current_path != nil{
+			if current_path != nil and current_path.edges != nil{
 				ask list<road>(current_path.edges){
+
 					traffic_density[myself.mobility_mode][myself.heading_index]  <- (self as road).traffic_density[myself.mobility_mode][myself.heading_index] + 1;
 				}
 			}
 		}
 	}
+	
+	/*reflex export_to_kml when: expert_to_kml and every(nb_cycles_between_save) and cycle <= cycle_to_export{
+		date init_date <- current_date minus_seconds (step*nb_cycles_between_save);
+		ask road {
+			if nb_people > 0  {
+				rgb col <- rgb(255,255 * (1-nb_people/road_capacity), 255 * (1-nb_people/road_capacity));
+				kml_export <- kml_export add_geometry (shape,nb_people*2.0,col, col, init_date ,current_date);	
+			}	
+		}
+		ask building {
+			kml_export <- kml_export add_geometry (shape,2.0,#black, rgb(color_per_type[type], size = "S" ? 50 : (size = "M" ? 100: 255)  ),init_date ,current_date);
+		}
+		if (cycle = cycle_to_export) {
+			save kml_export to:"result.kmz" type:"kmz";
+		
+		}
+	}*/
 	
 	
 	action infrastructure_management {
@@ -368,6 +415,7 @@ species profile {
 	float proportionL;
 	float max_dist_walk;
 	float max_dist_bike;
+	float max_dist_pev;
 }
 species people skills: [moving]{
 	int heading_index <- 0;
@@ -378,16 +426,25 @@ species people skills: [moving]{
 	point target;
 	profile my_profile;
 	float display_size <- sqrt(world.shape.area)* 0.01;
+	bool know_pev <- false;
+	bool has_car <- flip(weight_car);
+	bool has_bike <- flip(weight_bike);
 	action choose_mobility {
-		float dist <- manhattan_distance(origin.location, dest.location);
-		if (dist <= my_profile.max_dist_walk ) {
-			mobility_mode <- "walk";
-		} else if (dist <= my_profile.max_dist_bike ) {
-			mobility_mode <- "bike";
-		} else {
-			mobility_mode <- "car";
+		if (origin != nil and dest != nil and my_profile != nil) {
+			float dist <- manhattan_distance(origin.location, dest.location);
+			if (dist <= my_profile.max_dist_walk ) {
+				mobility_mode <- "walk";
+			} else if (has_bike and dist <= my_profile.max_dist_bike ) {
+				mobility_mode <- "bike";
+			} else if (know_pev and (dist <= my_profile.max_dist_pev )) {
+				mobility_mode <- "pev";
+			} else if has_car {
+				mobility_mode <- "car";
+			} else {
+				mobility_mode <- "walk";
+			}
+			speed <- rnd(speed_per_mobility[mobility_mode][0],speed_per_mobility[mobility_mode][1]) #km/#h;
 		}
-		speed <- rnd(speed_per_mobility[mobility_mode][0],speed_per_mobility[mobility_mode][1]) #km/#h;
 	}
 	
 	float manhattan_distance (point p1, point p2) {
@@ -405,13 +462,16 @@ species people skills: [moving]{
 		target <- nil;
 	}
 	
+	action mobility {
+		do unregister;
+		do goto target: target on: graph_per_mode[(mobility_mode = "pev") ? "bike" : mobility_mode] recompute_path: false ;
+		do register;
+	}
 	action update_target {
 		if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
 		else {target <- any_location_in(origin);}//centroid(origin);}
 		do choose_mobility;
-		do unregister;
-		do goto target: target on: graph_per_mode[mobility_mode] recompute_path: false ;
-		do register;
+		do mobility;
 	}
 	
 	action register {
@@ -429,9 +489,7 @@ species people skills: [moving]{
 		if (target = nil) {
 			do update_target;
 		}
-		do unregister;
-		do goto target: target on: graph_per_mode[mobility_mode] recompute_path: false ;
-		do register;
+		do mobility;
 		if (target = location) {
 			target <- nil;
 			to_destination <- not to_destination;
@@ -562,7 +620,8 @@ experiment city type: gui autorun: true{
 			event["4"] action: {people_aspect<-"default";};
 			event["5"] action: {people_aspect<-"profile";};
 			event["6"] action: {people_aspect<-"dynamic_abstract";};
-			event["7"] action: {people_aspect<-"hide";};    
+			event["7"] action: {people_aspect<-"hide";};   
+
 		}
 		
 	    //Bouton d'action
