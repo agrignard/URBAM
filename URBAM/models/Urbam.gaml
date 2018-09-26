@@ -250,9 +250,15 @@ species building {
 species road {
 	int traffic_density <- 0;
 	rgb color <- rnd_color(255);
-
+	map<float,list<people>> people_per_heading;
 	list<string> allowed_mobility <- ["walk","bike","car"];
 
+	init {
+		float angle <- first(shape.points) towards last(shape.points);
+		float angle2 <- last(shape.points) towards first(shape.points);
+		people_per_heading[angle] <-[];
+		people_per_heading[angle2] <-[];
+	}
 	aspect default {
 		if traffic_density = 0 {
 			draw shape color: #white;
@@ -327,6 +333,9 @@ species people skills: [moving]{
 		if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
 		else {target <- any_location_in(origin);}//centroid(origin);}
 		do choose_mobility;
+		
+		do goto target: target on: graph_per_mode[mobility_mode] ;
+		
 	}
 
 	reflex move when: dest != nil{
@@ -340,7 +349,9 @@ species people skills: [moving]{
 			do update_target;
 		}
 	}
-	reflex wander when: dest = nil {
+	
+	
+	reflex wander when: dest = nil and origin != nil {
 		do wander bounds: origin.bounds;
 	}
 
@@ -386,7 +397,7 @@ grid cell width: 8 height: 16 {
 		
 	}
 	action new_office (string the_size) {
-		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
+		if (my_building != nil and (my_building.type = "office") and (my_building.size = the_size)) {
 			return;
 		} else {
 			if (my_building != nil) {ask my_building {do remove;}}
