@@ -19,6 +19,7 @@ global {
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
 	
+
 	//kml kml_export;
 	bool expert_to_kml <- false;
 	int nb_cycles_between_save <- 50;
@@ -29,8 +30,8 @@ global {
 	
 	
 	
-	map<string,int> offsets <- ["car"::0, "bike"::-1, "walk"::1, "pev"::0];
-	map<string,rgb> color_per_mode <- ["car"::#red, "bike"::#blue, "walk"::#green, "pev"::#magenta];
+	map<string,int> offsets <- ["car"::0, "bike"::-1, "walk"::1, "pev"::-1];
+	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
 	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
@@ -38,9 +39,10 @@ global {
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],
 		5::["office","M"],6::["office","L"]];
-	float weight_car <- 0.4;
-	float weight_walk <- 0.4;
-	float weight_bike <- 0.2;
+	float weight_car parameter: 'weight car' category: "Mobility" min:0.1 max:1.0 <- 0.4;
+	float weight_walk parameter: 'weight walk' category: "Mobility" min:0.1 max:1.0 <- 0.4;
+	float weight_bike parameter: 'weight car' category: "Mobility" min:0.1 max:1.0 <- 0.2;
+
 	list<building> residentials;
 	map<building, float> offices;
 	string imageFolder <- "../images/";
@@ -350,13 +352,12 @@ species road {
 				}	
 			}
 			match "split"{
-				float scale <- min([1,traffic_density["car"] / 100]);				
-		//	draw shape + scale_factor color: rgb([255+(52-255)*scale1,255+(152-255)*scale1,255+(219-255)*scale1]) at: self.location+{offsets["car"],offsets["car"]};
+				float scale <- min([1,traffic_density["car"] / 90]);				
 				draw shape + scale_factor color: rgb(52,152,219,scale) at: self.location+{offsets["car"],offsets["car"]};
 				scale <- min([1,traffic_density["bike"] / 10]);
-				draw shape + scale_factor color: rgb([255+(192-255)*scale,255+(57-255)*scale,255+(43-255)*scale]) at: self.location+{scale_factor*spacing*offsets["bike"],scale_factor*spacing*offsets["bike"]};
+				draw shape + scale_factor color: rgb(192,57,43,scale) at: self.location+{scale_factor*spacing*offsets["bike"],scale_factor*spacing*offsets["bike"]};
 				scale <- min([1,traffic_density["walk"] / 1]);
-				draw shape + scale_factor color: rgb([255+(161-255)*scale,255+(196-255)*scale,255+(90-255)*scale]) at: self.location+{scale_factor*spacing*offsets["walk"],scale_factor*spacing*offsets["walk"]};
+				draw shape + scale_factor color: rgb(161,196,90,scale) at: self.location+{scale_factor*spacing*offsets["walk"],scale_factor*spacing*offsets["walk"]};
 			}		
 		}	
 	}
@@ -451,16 +452,16 @@ species people skills: [moving]{
 	aspect default{
 		switch people_aspect {
 			match "default" {
-				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90;}	
+				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90 at: location+{scale_factor*spacing*offsets[mobility_mode],scale_factor*spacing*offsets[mobility_mode]};}	
 			}	
 			match "profile" {
-				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90;}
+				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90 at: location+{scale_factor*spacing*offsets[mobility_mode],scale_factor*spacing*offsets[mobility_mode]};}
 			}
 			match "dynamic_abstract"{		
 				//		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
 				//		if (target != nil or dest = nil) {draw square(1.0) color: #white;}
 				float scale <- min([1,sum(road(current_edge).traffic_density) / 100])^2;
-				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)];}
+				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)] at: location+{scale_factor*spacing*offsets[mobility_mode],scale_factor*spacing*offsets[mobility_mode]};}
 			//		if current_path != nil{
 			//			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
 			//			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
@@ -534,10 +535,10 @@ grid button width:3 height:4
 }
 
 experiment city type: gui autorun: true{
-
 	parameter 'Roads aspect:' var: road_aspect category: 'Aspect' <-"split" among:["default", "hide","road type","edge color","split"];
 //	parameter 'Show cells:' var: show_cells category: 'Aspect' <-"show" among:["show", "hide"];
 	parameter 'People aspect:' var: people_aspect category: 'Aspect' <-"default" among:["default", "profile","dynamic_abstract","hide"];
+	parameter 'Spacing' var: spacing category: 'Aspect' <- 4.0 min:0.0 max: 10.0;
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
@@ -555,8 +556,7 @@ experiment city type: gui autorun: true{
 			event["5"] action: {people_aspect<-"profile";};
 			event["6"] action: {people_aspect<-"dynamic_abstract";};
 			event["7"] action: {people_aspect<-"hide";};   
-			
-		
+
 		}
 		
 	    //Bouton d'action
