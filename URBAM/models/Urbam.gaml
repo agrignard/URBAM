@@ -21,7 +21,9 @@ global {
 	
 	
 	map<string,int> offsets <- ["car"::0, "bike"::-1, "walk"::1];
-	map<string,rgb> color_per_mode <- ["car"::#red, "bike"::#blue, "walk"::#green];
+	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90)];
+	
+	
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
 	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
@@ -316,7 +318,7 @@ species road {
 				}	
 			}
 			match "split"{
-				float scale <- min([1,traffic_density["car"] / 100]);				
+				float scale <- min([1,traffic_density["car"] / 90]);				
 				draw shape + scale_factor color: rgb(52,152,219,scale) at: self.location+{offsets["car"],offsets["car"]};
 				scale <- min([1,traffic_density["bike"] / 10]);
 				draw shape + scale_factor color: rgb(192,57,43,scale) at: self.location+{scale_factor*spacing*offsets["bike"],scale_factor*spacing*offsets["bike"]};
@@ -409,16 +411,16 @@ species people skills: [moving]{
 	aspect default{
 		switch people_aspect {
 			match "default" {
-				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90;}	
+				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90 at: location+{scale_factor*spacing*offsets[mobility_mode],scale_factor*spacing*offsets[mobility_mode]};}	
 			}	
 			match "profile" {
-				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90;}
+				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90 at: location+{scale_factor*spacing*offsets[mobility_mode],scale_factor*spacing*offsets[mobility_mode]};}
 			}
 			match "dynamic_abstract"{		
 				//		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
 				//		if (target != nil or dest = nil) {draw square(1.0) color: #white;}
 				float scale <- min([1,sum(road(current_edge).traffic_density) / 100])^2;
-				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)];}
+				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)] at: location+{scale_factor*spacing*offsets[mobility_mode],scale_factor*spacing*offsets[mobility_mode]};}
 			//		if current_path != nil{
 			//			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
 			//			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
