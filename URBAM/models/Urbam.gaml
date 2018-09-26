@@ -11,6 +11,7 @@ model Urbam
 global {
 	//PARAMETERS
 	string road_aspect <- "default";
+	string people_aspect <- "default";
 	
 	float scale_factor;
 	
@@ -348,26 +349,29 @@ species people skills: [moving]{
 	reflex wander when: dest = nil {
 		do wander bounds: origin.bounds;
 	}
-
-    aspect default {
-    	if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90;}
-	}
 	
-	aspect profile{
-		if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90;}
-	}
 	
-	aspect tridefault {
-//		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
+	aspect default{
+		switch people_aspect {
+			match "default" {
+				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90;}	
+			}	
+			match "profile" {
+				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90;}
+			}
+			match "dynamic_abstract"{		
+				//		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
 
-//		if (target != nil or dest = nil) {draw square(1.0) color: #white;}
-		float scale <- min([1,road(current_edge).traffic_density / 100])^2;
-		if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)];}
-		//		if current_path != nil{
-//			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
-//			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
-//		}	
-
+				//		if (target != nil or dest = nil) {draw square(1.0) color: #white;}
+				float scale <- min([1,road(current_edge).traffic_density / 100])^2;
+				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)];}
+			//		if current_path != nil{
+			//			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
+			//			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
+			//		}
+			}			
+		}
+		
 	}
 }
 grid cell width: 8 height: 16 {
@@ -429,7 +433,8 @@ grid button width:3 height:4
 }
 
 experiment city type: gui autorun: true{
-	parameter 'Roads aspect:' var: road_aspect category: 'Aspect' <-"edge color" among:["default", "hide","road type","edge color"];
+	parameter 'Roads aspect:' var: road_aspect category: 'Aspect' <-"edge color" among:["default","road type","edge color","hide"];
+	parameter 'People aspect:' var: people_aspect category: 'Aspect' <-"default" among:["default", "profile","dynamic_abstract","hide"];
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
@@ -438,13 +443,22 @@ experiment city type: gui autorun: true{
 			species road ;
 			species people;
 			species building;
-			event mouse_down action:infrastructure_management;  
+			event mouse_down action:infrastructure_management;
+			event["0"] action: {road_aspect<-"hide";};
+			event["1"] action: {road_aspect<-"default";};
+			event["2"] action: {road_aspect<-"edge color";};
+			event["3"] action: {road_aspect<-"road type";};
+			event["4"] action: {people_aspect<-"default";};
+			event["5"] action: {people_aspect<-"profile";};
+			event["6"] action: {people_aspect<-"dynamic_abstract";};
+			event["7"] action: {people_aspect<-"hide";};    
 		}
 		
-			//Bouton d'action
+	    //Bouton d'action
 		display action_buton name:"Actions possibles" ambient_light:100 	{
 			species button aspect:normal ;
 			event mouse_down action:activate_act;    
 		}	
+		
 	}
 }
