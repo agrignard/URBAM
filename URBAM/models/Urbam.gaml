@@ -19,7 +19,6 @@ global {
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
 	
-	
 	map<string,int> offsets <- ["car"::0, "bike"::-1, "walk"::1];
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90)];
 	
@@ -31,9 +30,9 @@ global {
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],
 		5::["office","M"],6::["office","L"]];
-	float weight_car <- 0.4;
-	float weight_walk <- 0.4;
-	float weight_bike <- 0.2;
+	float weight_car parameter: 'weight car' category: "Mobility" min:0.1 max:1.0 <- 0.4;
+	float weight_walk parameter: 'weight walk' category: "Mobility" min:0.1 max:1.0 <- 0.4;
+	float weight_bike parameter: 'weight car' category: "Mobility" min:0.1 max:1.0 <- 0.2;
 	list<building> residentials;
 	map<building, float> offices;
 	string imageFolder <- "../images/";
