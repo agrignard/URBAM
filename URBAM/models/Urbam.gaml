@@ -290,9 +290,15 @@ species people skills: [moving]{
 	reflex wander when: dest = nil {
 		do wander bounds: origin.bounds;
 	}
-	aspect default {
-
-		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
+	
+    aspect default {
+    	if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
+	}
+	
+	aspect tridefault {
+//		if (target != nil or dest = nil) {draw square(1.0) color: #white;}
+		float scale <- min([1,road(current_edge).traffic_density / 100])^2;
+		if (target != nil or dest = nil) {draw square(1.0) color: colormap_per_mode["car"][int(4*scale)];}
 		//		if current_path != nil{
 //			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
 //			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
