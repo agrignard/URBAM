@@ -11,8 +11,8 @@ model Urbam
 global {
 	//PARAMETERS
 	string road_aspect <- "default";
-//	string show_cells <- "show";
-//	map<string,rgb> cells_color <- ["show"::#lightgray, "hide"::#white];
+	string people_aspect <- "default";
+
 	
 	float scale_factor;
 	float spacing <- 4;
@@ -22,6 +22,7 @@ global {
 	
 	map<string,int> offsets <- ["car"::0, "bike"::-1, "walk"::1];
 	map<string,rgb> color_per_mode <- ["car"::#red, "bike"::#blue, "walk"::#green];
+	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
 	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
 	map<string,float> nb_people_per_size <- ["S"::10.0, "M"::50.0, "L"::100.0];
@@ -169,15 +170,17 @@ global {
 	}
 	
 	action build_buildings {
-		cell selected_cell <- first(cell overlapping (circle(1) at_location #user_location));
-		if (action_type = 3) {ask selected_cell {do new_residential("S");}} 
-		if (action_type = 4) {ask selected_cell {do new_office("S");}} 
-		if (action_type = 5) {ask selected_cell {do erase_building;}} 
-		if (action_type = 6) {ask selected_cell {do new_residential("M");}} 
-		if (action_type = 7) {ask selected_cell {do new_office("M");}} 
-		if (action_type = 9) {ask selected_cell {do new_residential("L");}} 
-		if (action_type = 10) {ask selected_cell {do new_office("L");}} 
+		cell selected_cell <- first(cell overlapping (circle(sqrt(shape.area)/100.0) at_location #user_location));
+		if (selected_cell != nil) {
 		
+			if (action_type = 3) {ask selected_cell {do new_residential("S");}} 
+			if (action_type = 4) {ask selected_cell {do new_office("S");}} 
+			if (action_type = 5) {ask selected_cell {do erase_building;}} 
+			if (action_type = 6) {ask selected_cell {do new_residential("M");}} 
+			if (action_type = 7) {ask selected_cell {do new_office("M");}} 
+			if (action_type = 9) {ask selected_cell {do new_residential("L");}} 
+			if (action_type = 10) {ask selected_cell {do new_office("L");}} 
+		}
 	}
 	
 	 
@@ -258,9 +261,15 @@ species building {
 species road {
 	map<string,int> traffic_density <- 0;
 	rgb color <- rnd_color(255);
-
+	map<float,list<people>> people_per_heading;
 	list<string> allowed_mobility <- ["walk","bike","car"];
 
+	init {
+		float angle <- first(shape.points) towards last(shape.points);
+		float angle2 <- last(shape.points) towards first(shape.points);
+		people_per_heading[angle] <-[];
+		people_per_heading[angle2] <-[];
+	}
 	aspect default {
 		switch road_aspect {
 			match "default" {
@@ -345,6 +354,9 @@ species people skills: [moving]{
 		if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
 		else {target <- any_location_in(origin);}//centroid(origin);}
 		do choose_mobility;
+		
+		do goto target: target on: graph_per_mode[mobility_mode] ;
+		
 	}
 
 	reflex move when: dest != nil{
@@ -358,25 +370,34 @@ species people skills: [moving]{
 			do update_target;
 		}
 	}
-	reflex wander when: dest = nil {
+	
+	
+	reflex wander when: dest = nil and origin != nil {
 		do wander bounds: origin.bounds;
 	}
-
-    aspect default {
-    	if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90;}
-	}
 	
-	aspect tridefault {
-//		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
 
-//		if (target != nil or dest = nil) {draw square(1.0) color: #white;}
-		float scale <- min([1,sum(road(current_edge).traffic_density) / 100])^2;
-		if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)];}
-		//		if current_path != nil{
-//			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
-//			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
-//		}	
-
+	
+	aspect default{
+		switch people_aspect {
+			match "default" {
+				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90;}	
+			}	
+			match "profile" {
+				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90;}
+			}
+			match "dynamic_abstract"{		
+				//		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
+				//		if (target != nil or dest = nil) {draw square(1.0) color: #white;}
+				float scale <- min([1,sum(road(current_edge).traffic_density) / 100])^2;
+				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)];}
+			//		if current_path != nil{
+			//			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
+			//			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
+			//		}
+			}			
+		}
+		
 	}
 }
 grid cell width: 8 height: 16 {
@@ -404,7 +425,7 @@ grid cell width: 8 height: 16 {
 		
 	}
 	action new_office (string the_size) {
-		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
+		if (my_building != nil and (my_building.type = "office") and (my_building.size = the_size)) {
 			return;
 		} else {
 			if (my_building != nil) {ask my_building {do remove;}}
@@ -443,8 +464,10 @@ grid button width:3 height:4
 }
 
 experiment city type: gui autorun: true{
+
 	parameter 'Roads aspect:' var: road_aspect category: 'Aspect' <-"split" among:["default", "hide","road type","edge color","split"];
 //	parameter 'Show cells:' var: show_cells category: 'Aspect' <-"show" among:["show", "hide"];
+	parameter 'People aspect:' var: people_aspect category: 'Aspect' <-"default" among:["default", "profile","dynamic_abstract","hide"];
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
@@ -453,13 +476,22 @@ experiment city type: gui autorun: true{
 			species road ;
 			species people;
 			species building;
-			event mouse_down action:infrastructure_management;  
+			event mouse_down action:infrastructure_management;
+			event["0"] action: {road_aspect<-"hide";};
+			event["1"] action: {road_aspect<-"default";};
+			event["2"] action: {road_aspect<-"edge color";};
+			event["3"] action: {road_aspect<-"road type";};
+			event["4"] action: {people_aspect<-"default";};
+			event["5"] action: {people_aspect<-"profile";};
+			event["6"] action: {people_aspect<-"dynamic_abstract";};
+			event["7"] action: {people_aspect<-"hide";};    
 		}
 		
-			//Bouton d'action
+	    //Bouton d'action
 		display action_buton name:"Actions possibles" ambient_light:100 	{
 			species button aspect:normal ;
 			event mouse_down action:activate_act;    
 		}	
+		
 	}
 }
