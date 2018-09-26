@@ -11,11 +11,16 @@ model Urbam
 global {
 	//PARAMETERS
 	string road_aspect <- "default";
+//	string show_cells <- "show";
+//	map<string,rgb> cells_color <- ["show"::#lightgray, "hide"::#white];
 	
 	float scale_factor;
-	
+	float spacing <- 4;
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
+	
+	
+	map<string,int> offsets <- ["car"::0, "bike"::-1, "walk"::1];
 	map<string,rgb> color_per_mode <- ["car"::#red, "bike"::#blue, "walk"::#green];
 	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
@@ -112,11 +117,11 @@ global {
 	
 
 	reflex compute_traffic_density{
-		ask road {traffic_density <- 0;}
+		ask road {traffic_density <- ["car"::0, "bike"::0, "walk"::0];}
 		ask people{
 			if current_path != nil{
 				ask list<road>(current_path.edges){
-					traffic_density  <- (self as road).traffic_density + 1;
+					traffic_density[myself.mobility_mode]  <- (self as road).traffic_density[myself.mobility_mode] + 1;
 				}
 			}
 //			if current_edge != nil{
@@ -251,7 +256,7 @@ species building {
 }
 
 species road {
-	int traffic_density <- 0;
+	map<string,int> traffic_density <- 0;
 	rgb color <- rnd_color(255);
 
 	list<string> allowed_mobility <- ["walk","bike","car"];
@@ -259,10 +264,10 @@ species road {
 	aspect default {
 		switch road_aspect {
 			match "default" {
-				if traffic_density = 0 {
+				if sum(traffic_density) = 0 {
 					draw shape color: #white;
 				}else{
-					draw shape + scale_factor*traffic_density/50 color: rgb(52,152,219);
+					draw shape + scale_factor*sum(traffic_density)/50 color: rgb(52,152,219);
 				}	
 			}	
 			match "road type" {
@@ -277,14 +282,23 @@ species road {
 				}
 			}
 			match "edge color"{		
-				if traffic_density = 0 {
+				if sum(traffic_density) = 0 {
 					draw shape color: #white;
 				}else{
-					float scale <- min([1,traffic_density / 100])^2;
+					float scale <- min([1,sum(traffic_density) / 100])^2;
 					//draw shape + 0.3 color: rgb([52+(231-52)*scale,152+(76-152)*scale,219+(60-219)*scale]);
 					draw shape + scale_factor color: colormap_per_mode["car"][int(4*scale)];
 				}	
-			}			
+			}
+			match "split"{
+				float scale <- min([1,traffic_density["car"] / 100]);				
+		//	draw shape + scale_factor color: rgb([255+(52-255)*scale1,255+(152-255)*scale1,255+(219-255)*scale1]) at: self.location+{offsets["car"],offsets["car"]};
+				draw shape + scale_factor color: rgb(52,152,219,scale) at: self.location+{offsets["car"],offsets["car"]};
+				scale <- min([1,traffic_density["bike"] / 10]);
+				draw shape + scale_factor color: rgb([255+(192-255)*scale,255+(57-255)*scale,255+(43-255)*scale]) at: self.location+{scale_factor*spacing*offsets["bike"],scale_factor*spacing*offsets["bike"]};
+				scale <- min([1,traffic_density["walk"] / 1]);
+				draw shape + scale_factor color: rgb([255+(161-255)*scale,255+(196-255)*scale,255+(90-255)*scale]) at: self.location+{scale_factor*spacing*offsets["walk"],scale_factor*spacing*offsets["walk"]};
+			}		
 		}	
 	}
 
@@ -356,7 +370,7 @@ species people skills: [moving]{
 //		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
 
 //		if (target != nil or dest = nil) {draw square(1.0) color: #white;}
-		float scale <- min([1,road(current_edge).traffic_density / 100])^2;
+		float scale <- min([1,sum(road(current_edge).traffic_density) / 100])^2;
 		if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)];}
 		//		if current_path != nil{
 //			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
@@ -367,7 +381,7 @@ species people skills: [moving]{
 }
 grid cell width: 8 height: 16 {
 	building my_building;
-	rgb color <- #lightgray;
+	rgb color <- #white;
 	action new_residential(string the_size) {
 
 		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
@@ -405,6 +419,11 @@ grid cell width: 8 height: 16 {
 	action erase_building {
 		if (my_building != nil) {ask my_building {do remove;}}
 	}
+	
+	aspect default{
+		draw square(0.8*self.shape.width) color: #red at: self.location;
+		draw square(1000) color: #red ;
+	}
 
 }
 
@@ -424,7 +443,8 @@ grid button width:3 height:4
 }
 
 experiment city type: gui autorun: true{
-	parameter 'Roads aspect:' var: road_aspect category: 'Aspect' <-"edge color" among:["default", "hide","road type","edge color"];
+	parameter 'Roads aspect:' var: road_aspect category: 'Aspect' <-"split" among:["default", "hide","road type","edge color","split"];
+//	parameter 'Show cells:' var: show_cells category: 'Aspect' <-"show" among:["show", "hide"];
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
