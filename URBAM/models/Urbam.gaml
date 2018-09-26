@@ -132,26 +132,29 @@ global {
 	
 	
 	action manage_road{
-		road selected_road <- first(road overlapping (circle(1) at_location #user_location));
-		bool with_car <- "car" in selected_road.allowed_mobility;
-		bool with_bike <- "bike" in selected_road.allowed_mobility;
-		bool with_pedestrian <- "walk" in selected_road.allowed_mobility;
-		map input_values <- user_input(["car allowed"::with_car,"bike allowed"::with_bike,"pedestrian allowed"::with_pedestrian]);
-		if (with_car != input_values["car allowed"]) {
-			if (with_car) {selected_road.allowed_mobility >> "car";}
-			else {selected_road.allowed_mobility << "car";}
+		road selected_road <- first(road overlapping (circle(sqrt(shape.area)/100.0) at_location #user_location));
+		if (selected_road != nil) {
+			bool with_car <- "car" in selected_road.allowed_mobility;
+			bool with_bike <- "bike" in selected_road.allowed_mobility;
+			bool with_pedestrian <- "walk" in selected_road.allowed_mobility;
+			map input_values <- user_input(["car allowed"::with_car,"bike allowed"::with_bike,"pedestrian allowed"::with_pedestrian]);
+			if (with_car != input_values["car allowed"]) {
+				if (with_car) {selected_road.allowed_mobility >> "car";}
+				else {selected_road.allowed_mobility << "car";}
+				
+			}
+			if (with_bike != input_values["bike allowed"]) {
+				if (with_bike) {selected_road.allowed_mobility >> "bike";}
+				else {selected_road.allowed_mobility << "bike";}
+			}
+			if (with_pedestrian != input_values["pedestrian allowed"]) {
+				if (with_pedestrian) {selected_road.allowed_mobility >> "walk";}
+				else {selected_road.allowed_mobility << "walk";}
+			}
 			
-		}
-		if (with_bike != input_values["bike allowed"]) {
-			if (with_bike) {selected_road.allowed_mobility >> "bike";}
-			else {selected_road.allowed_mobility << "bike";}
-		}
-		if (with_pedestrian != input_values["pedestrian allowed"]) {
-			if (with_pedestrian) {selected_road.allowed_mobility >> "walk";}
-			else {selected_road.allowed_mobility << "walk";}
+			do update_graphs;
 		}
 		
-		do update_graphs;
 		
 	}
 	
