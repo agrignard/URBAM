@@ -19,15 +19,18 @@ global {
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
 	
-	kml kml_export;
+	//kml kml_export;
 	bool expert_to_kml <- false;
 	int nb_cycles_between_save <- 50;
 	int cycle_to_export <- 500;
+	bool refresh_mobility <- false;
+	
+	float PEV_rate <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: true on_change: {refresh_mobility <- true;};
 	
 	
 	
-	map<string,int> offsets <- ["car"::0, "bike"::-1, "walk"::1];
-	map<string,rgb> color_per_mode <- ["car"::#red, "bike"::#blue, "walk"::#green];
+	map<string,int> offsets <- ["car"::0, "bike"::-1, "walk"::1, "pev"::0];
+	map<string,rgb> color_per_mode <- ["car"::#red, "bike"::#blue, "walk"::#green, "pev"::#magenta];
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
 	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
@@ -46,7 +49,7 @@ global {
 	int action_type;
 
 	int file_cpt <- 1;
-	bool load_grid_file <- true;
+	bool load_grid_file <- false;
 	map<string,graph> graph_per_mode;
 	
 	float road_capacity <- 10.0;
@@ -55,7 +58,7 @@ global {
 	geometry shape <- envelope(nyc_bounds0_shape_file);
 	float step <- sqrt(shape.area) /2000.0 ;
 	
-	map<string,list<float>> speed_per_mobility <- ["car"::[20.0,40.0], "bike"::[5.0,15.0], "walk"::[3.0,7.0]];
+	map<string,list<float>> speed_per_mobility <- ["car"::[20.0,40.0], "bike"::[5.0,15.0], "walk"::[3.0,7.0], "pev"::[15.0,30.0]];
 	
 	//image des boutons
 	list<file> images <- [
@@ -86,7 +89,7 @@ global {
 	
 	action load_profiles {
 		create profile from: csv_file(profile_file,";", true) with: [proportionS::float(get("proportionS")),proportionM::float(get("proportionM")),proportionL::float(get("proportionL")),
-			name::string(get("typo")), max_dist_walk::float(get("max_dist_walk")),max_dist_bike::float(get("max_dist_bike"))
+			name::string(get("typo")), max_dist_walk::float(get("max_dist_walk")),max_dist_bike::float(get("max_dist_bike")),max_dist_pev::float(get("max_dist_pev"))
 		];
 		ask profile {
 			map<profile, float> prof_pro1 <- proportions_per_bd_type["S"];
@@ -122,6 +125,14 @@ global {
 	}
 	
 	
+	reflex update_mobility when: refresh_mobility{
+		ask people {
+			know_pev <- flip(PEV_rate);
+			do choose_mobility;
+			do mobility;
+		}
+	}
+	
 	reflex test_load_file when: load_grid_file and every(100#cycle) and file_cpt < 4{
 		do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
 		file_cpt <- file_cpt+ 1;
@@ -134,7 +145,7 @@ global {
 	}
 
 	reflex compute_traffic_density{
-		ask road {traffic_density <- ["car"::0, "bike"::0, "walk"::0];}
+		ask road {traffic_density <- ["car"::0, "bike"::0, "walk"::0, "pev"::0];}
 		ask people{
 			if current_path != nil{
 				ask list<road>(current_path.edges){
@@ -147,7 +158,7 @@ global {
 		}
 	}
 	
-	reflex export_to_kml when: expert_to_kml and every(nb_cycles_between_save) and cycle <= cycle_to_export{
+	/*reflex export_to_kml when: expert_to_kml and every(nb_cycles_between_save) and cycle <= cycle_to_export{
 		date init_date <- current_date minus_seconds (step*nb_cycles_between_save);
 		ask road {
 			if nb_people > 0  {
@@ -162,7 +173,7 @@ global {
 			save kml_export to:"result.kmz" type:"kmz";
 		
 		}
-	}
+	}*/
 	
 	
 	action infrastructure_management {
@@ -360,6 +371,7 @@ species profile {
 	float proportionL;
 	float max_dist_walk;
 	float max_dist_bike;
+	float max_dist_pev;
 }
 species people skills: [moving]{
 	string mobility_mode <- "walk"; 
@@ -369,16 +381,21 @@ species people skills: [moving]{
 	point target;
 	profile my_profile;
 	float display_size <- sqrt(world.shape.area)* 0.01;
+	bool know_pev <- false;
 	action choose_mobility {
-		float dist <- manhattan_distance(origin.location, dest.location);
-		if (dist <= my_profile.max_dist_walk ) {
-			mobility_mode <- "walk";
-		} else if (dist <= my_profile.max_dist_bike ) {
-			mobility_mode <- "bike";
-		} else {
-			mobility_mode <- "car";
+		if (origin != nil and dest != nil and my_profile != nil) {
+			float dist <- manhattan_distance(origin.location, dest.location);
+			if (dist <= my_profile.max_dist_walk ) {
+				mobility_mode <- "walk";
+			} else if (dist <= my_profile.max_dist_bike ) {
+				mobility_mode <- "bike";
+			} else if (know_pev and (dist <= my_profile.max_dist_pev )) {
+				mobility_mode <- "pev";
+			} else {
+				mobility_mode <- "car";
+			}
+			speed <- rnd(speed_per_mobility[mobility_mode][0],speed_per_mobility[mobility_mode][1]) #km/#h;
 		}
-		speed <- rnd(speed_per_mobility[mobility_mode][0],speed_per_mobility[mobility_mode][1]) #km/#h;
 	}
 	
 	float manhattan_distance (point p1, point p2) {
@@ -389,13 +406,16 @@ species people skills: [moving]{
 		target <- nil;
 	}
 	
+	action mobility {
+		do unregister;
+		do goto target: target on: graph_per_mode[(mobility_mode = "pev") ? "bike" : mobility_mode] recompute_path: false ;
+		do register;
+	}
 	action update_target {
 		if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
 		else {target <- any_location_in(origin);}//centroid(origin);}
 		do choose_mobility;
-		do unregister;
-		do goto target: target on: graph_per_mode[mobility_mode] recompute_path: false ;
-		do register;
+		do mobility;
 	}
 	
 	action register {
@@ -413,9 +433,7 @@ species people skills: [moving]{
 		if (target = nil) {
 			do update_target;
 		}
-		do unregister;
-		do goto target: target on: graph_per_mode[mobility_mode] recompute_path: false ;
-		do register;
+		do mobility;
 		if (target = location) {
 			target <- nil;
 			to_destination <- not to_destination;
@@ -538,9 +556,7 @@ experiment city type: gui autorun: true{
 			event["6"] action: {people_aspect<-"dynamic_abstract";};
 			event["7"] action: {people_aspect<-"hide";};   
 			
-			graphics "toto" {
-				draw union(nyc_bounds0_shape_file.contents) color: #pink;
-			} 
+		
 		}
 		
 	    //Bouton d'action
