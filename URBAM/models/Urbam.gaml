@@ -358,7 +358,7 @@ species people skills: [moving]{
 }
 grid cell width: 8 height: 16 {
 	building my_building;
-	rgb color <- #white;//#lightgray;
+	rgb color <- #lightgray;
 	action new_residential(string the_size) {
 
 		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
