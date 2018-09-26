@@ -39,9 +39,9 @@ global {
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],
 		5::["office","M"],6::["office","L"]];
-	float weight_car parameter: 'weight car' category: "Mobility" min:0.1 max:1.0 <- 0.4;
-	float weight_walk parameter: 'weight walk' category: "Mobility" min:0.1 max:1.0 <- 0.4;
-	float weight_bike parameter: 'weight car' category: "Mobility" min:0.1 max:1.0 <- 0.2;
+	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.4;
+	float weight_walk parameter: 'weight walk' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.4;
+	float weight_bike parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.2;
 
 	list<building> residentials;
 	map<building, float> offices;
@@ -473,7 +473,7 @@ species people skills: [moving]{
 }
 grid cell width: 8 height: 16 {
 	building my_building;
-	rgb color <- #white;
+	rgb color <- #lightgray;
 	action new_residential(string the_size) {
 
 		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
