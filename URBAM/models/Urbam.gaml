@@ -33,6 +33,7 @@ global {
 	float weight_car parameter: 'weight car' category: "Mobility" min:0.1 max:1.0 <- 0.4;
 	float weight_walk parameter: 'weight walk' category: "Mobility" min:0.1 max:1.0 <- 0.4;
 	float weight_bike parameter: 'weight car' category: "Mobility" min:0.1 max:1.0 <- 0.2;
+
 	list<building> residentials;
 	map<building, float> offices;
 	string imageFolder <- "../images/";
