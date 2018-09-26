@@ -26,7 +26,6 @@ global {
 	int cycle_to_export <- 500;
 	bool refresh_mobility <- false;
 	
-	float PEV_rate <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: true on_change: {refresh_mobility <- true;};
 	
 	
 	
@@ -39,10 +38,10 @@ global {
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],
 		5::["office","M"],6::["office","L"]];
-	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.4;
-	float weight_walk parameter: 'weight walk' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.4;
-	float weight_bike parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.2;
-
+	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 on_change: {refresh_mobility <- true;};
+	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 on_change: {refresh_mobility <- true;};
+	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" on_change: {refresh_mobility <- true;};
+	
 	list<building> residentials;
 	map<building, float> offices;
 	string imageFolder <- "../images/";
@@ -129,9 +128,13 @@ global {
 	
 	reflex update_mobility when: refresh_mobility{
 		ask people {
-			know_pev <- flip(PEV_rate);
+			know_pev <- flip(weight_pev);
+			has_car <- flip(weight_car);
+			has_bike <- flip(weight_bike);
+			
 			do choose_mobility;
 			do mobility;
+			refresh_mobility <- false;
 		}
 	}
 	
@@ -383,17 +386,21 @@ species people skills: [moving]{
 	profile my_profile;
 	float display_size <- sqrt(world.shape.area)* 0.01;
 	bool know_pev <- false;
+	bool has_car <- flip(weight_car);
+	bool has_bike <- flip(weight_bike);
 	action choose_mobility {
 		if (origin != nil and dest != nil and my_profile != nil) {
 			float dist <- manhattan_distance(origin.location, dest.location);
 			if (dist <= my_profile.max_dist_walk ) {
 				mobility_mode <- "walk";
-			} else if (dist <= my_profile.max_dist_bike ) {
+			} else if (has_bike and dist <= my_profile.max_dist_bike ) {
 				mobility_mode <- "bike";
 			} else if (know_pev and (dist <= my_profile.max_dist_pev )) {
 				mobility_mode <- "pev";
-			} else {
+			} else if has_car {
 				mobility_mode <- "car";
+			} else {
+				mobility_mode <- "walk";
 			}
 			speed <- rnd(speed_per_mobility[mobility_mode][0],speed_per_mobility[mobility_mode][1]) #km/#h;
 		}
