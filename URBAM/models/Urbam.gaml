@@ -24,7 +24,6 @@ global {
 	bool expert_to_kml <- false;
 	int nb_cycles_between_save <- 50;
 	int cycle_to_export <- 500;
-	bool refresh_mobility <- false;
 	
 	
 	
@@ -38,9 +37,13 @@ global {
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],
 		5::["office","M"],6::["office","L"]];
-	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 on_change: {refresh_mobility <- true;};
-	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 on_change: {refresh_mobility <- true;};
-	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" on_change: {refresh_mobility <- true;};
+	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
+	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
+	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" ;
+	
+	float weight_car_prev <- weight_car;
+	float weight_bike_prev <- weight_bike;
+	float weight_pev_prev <- weight_pev;
 	
 	list<building> residentials;
 	map<building, float> offices;
@@ -126,16 +129,21 @@ global {
 	}
 	
 	
-	reflex update_mobility when: refresh_mobility{
-		ask people {
-			know_pev <- flip(weight_pev);
-			has_car <- flip(weight_car);
-			has_bike <- flip(weight_bike);
-			
-			do choose_mobility;
-			do mobility;
-			refresh_mobility <- false;
+	reflex update_mobility  {
+		if(weight_car_prev != weight_car) or (weight_bike_prev != weight_bike) or (weight_pev_prev != weight_pev) {
+			ask people {
+				know_pev <- flip(weight_pev);
+				has_car <- flip(weight_car);
+				has_bike <- flip(weight_bike);
+				
+				do choose_mobility;
+				do mobility;
+			}
 		}
+		weight_car_prev <- weight_car;
+		weight_bike_prev <- weight_bike;
+		weight_pev_prev <-weight_pev;
+		
 	}
 	
 	reflex test_load_file when: load_grid_file and every(100#cycle) and file_cpt < 4{
@@ -152,9 +160,9 @@ global {
 	reflex compute_traffic_density{
 		ask road {traffic_density <- ["car"::0, "bike"::0, "walk"::0, "pev"::0];}
 		ask people{
-			if current_path != nil{
+			if current_path != nil and current_path.edges != nil{
 				ask list<road>(current_path.edges){
-					traffic_density[myself.mobility_mode]  <- (self as road).traffic_density[myself.mobility_mode] + 1;
+					traffic_density[myself.mobility_mode]  <- traffic_density[myself.mobility_mode] + 1;
 				}
 			}
 //			if current_edge != nil{
