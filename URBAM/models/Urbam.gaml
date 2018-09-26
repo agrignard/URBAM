@@ -159,15 +159,17 @@ global {
 	}
 	
 	action build_buildings {
-		cell selected_cell <- first(cell overlapping (circle(1) at_location #user_location));
-		if (action_type = 3) {ask selected_cell {do new_residential("S");}} 
-		if (action_type = 4) {ask selected_cell {do new_office("S");}} 
-		if (action_type = 5) {ask selected_cell {do erase_building;}} 
-		if (action_type = 6) {ask selected_cell {do new_residential("M");}} 
-		if (action_type = 7) {ask selected_cell {do new_office("M");}} 
-		if (action_type = 9) {ask selected_cell {do new_residential("L");}} 
-		if (action_type = 10) {ask selected_cell {do new_office("L");}} 
+		cell selected_cell <- first(cell overlapping (circle(sqrt(shape.area)/100.0) at_location #user_location));
+		if (selected_cell != nil) {
 		
+			if (action_type = 3) {ask selected_cell {do new_residential("S");}} 
+			if (action_type = 4) {ask selected_cell {do new_office("S");}} 
+			if (action_type = 5) {ask selected_cell {do erase_building;}} 
+			if (action_type = 6) {ask selected_cell {do new_residential("M");}} 
+			if (action_type = 7) {ask selected_cell {do new_office("M");}} 
+			if (action_type = 9) {ask selected_cell {do new_residential("L");}} 
+			if (action_type = 10) {ask selected_cell {do new_office("L");}} 
+		}
 	}
 	
 	 
