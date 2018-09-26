@@ -301,12 +301,11 @@ species road {
 			}
 			match "split"{
 				float scale <- min([1,traffic_density["car"] / 100]);				
-		//	draw shape + scale_factor color: rgb([255+(52-255)*scale1,255+(152-255)*scale1,255+(219-255)*scale1]) at: self.location+{offsets["car"],offsets["car"]};
 				draw shape + scale_factor color: rgb(52,152,219,scale) at: self.location+{offsets["car"],offsets["car"]};
 				scale <- min([1,traffic_density["bike"] / 10]);
-				draw shape + scale_factor color: rgb([255+(192-255)*scale,255+(57-255)*scale,255+(43-255)*scale]) at: self.location+{scale_factor*spacing*offsets["bike"],scale_factor*spacing*offsets["bike"]};
+				draw shape + scale_factor color: rgb(192,57,43,scale) at: self.location+{scale_factor*spacing*offsets["bike"],scale_factor*spacing*offsets["bike"]};
 				scale <- min([1,traffic_density["walk"] / 1]);
-				draw shape + scale_factor color: rgb([255+(161-255)*scale,255+(196-255)*scale,255+(90-255)*scale]) at: self.location+{scale_factor*spacing*offsets["walk"],scale_factor*spacing*offsets["walk"]};
+				draw shape + scale_factor color: rgb(161,196,90,scale) at: self.location+{scale_factor*spacing*offsets["walk"],scale_factor*spacing*offsets["walk"]};
 			}		
 		}	
 	}
@@ -464,10 +463,10 @@ grid button width:3 height:4
 }
 
 experiment city type: gui autorun: true{
-
 	parameter 'Roads aspect:' var: road_aspect category: 'Aspect' <-"split" among:["default", "hide","road type","edge color","split"];
 //	parameter 'Show cells:' var: show_cells category: 'Aspect' <-"show" among:["show", "hide"];
 	parameter 'People aspect:' var: people_aspect category: 'Aspect' <-"default" among:["default", "profile","dynamic_abstract","hide"];
+	parameter 'Spacing' var: spacing category: 'Aspect' <- 4.0 min:0.0 max: 10.0;
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
