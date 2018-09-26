@@ -73,7 +73,7 @@ global {
 			create road with: [shape:: line(reverse(shape.points))];
 		}
 		do update_graphs;
-		do init_buttons;
+		do init_buttons; 
 		do load_profiles;
 		scale_factor <- min([first(cell).shape.width,first(cell).shape.height])/40;
 	}
