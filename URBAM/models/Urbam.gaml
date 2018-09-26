@@ -39,6 +39,9 @@ global {
 	bool load_grid_file <- false;
 	map<string,graph> graph_per_mode;
 	
+	float road_capacity <- 10.0;
+	bool traffic_jam <- true parameter: true;
+	
 	geometry shape <- envelope(nyc_bounds0_shape_file);
 	float step <- sqrt(shape.area) /500.0 ;
 	
@@ -112,6 +115,11 @@ global {
 		file_cpt <- file_cpt+ 1;
 	}
 	
+	
+	reflex update_graph when: every(3 #cycle) {
+		map<road,float> weights <- traffic_jam ? road as_map (each::(each.shape.perimeter)) : road as_map (each::(each.shape.perimeter * (min([10,1/exp(-each.nb_people/road_capacity)]))));
+		graph_per_mode["car"] <- graph_per_mode["car"] with_weights weights;
+	}
 
 	reflex compute_traffic_density{
 		ask road {traffic_density <- 0;}
@@ -256,6 +264,7 @@ species building {
 
 species road {
 	int traffic_density <- 0;
+	int nb_people;
 	rgb color <- rnd_color(255);
 	map<float,list<people>> people_per_heading;
 	list<string> allowed_mobility <- ["walk","bike","car"];
@@ -341,16 +350,29 @@ species people skills: [moving]{
 		if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
 		else {target <- any_location_in(origin);}//centroid(origin);}
 		do choose_mobility;
-		
-		do goto target: target on: graph_per_mode[mobility_mode] ;
-		
+		do unregister;
+		do goto target: target on: graph_per_mode[mobility_mode] recompute_path: false ;
+		do register;
+	}
+	
+	action register {
+		if ((mobility_mode = "car") and current_edge != nil) {
+			road(current_edge).nb_people <- road(current_edge).nb_people + 1;
+		}
+	}
+	action unregister {
+		if ((mobility_mode = "car") and current_edge != nil) {
+			road(current_edge).nb_people <- road(current_edge).nb_people - 1;
+		}
 	}
 
 	reflex move when: dest != nil{
 		if (target = nil) {
 			do update_target;
 		}
-		do goto target: target on: graph_per_mode[mobility_mode] ;
+		do unregister;
+		do goto target: target on: graph_per_mode[mobility_mode] recompute_path: false ;
+		do register;
 		if (target = location) {
 			target <- nil;
 			to_destination <- not to_destination;
