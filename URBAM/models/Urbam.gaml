@@ -9,6 +9,9 @@ model Urbam
 
 
 global {
+	
+	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
+	
 	map<string,rgb> color_per_mode <- ["car"::#red, "bike"::#blue, "walk"::#green];
 	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
@@ -22,11 +25,18 @@ global {
 	list<building> residentials;
 	map<building, float> offices;
 	string imageFolder <- "../images/";
+	string profile_file <- "../includes/profiles.csv"; 
+	map<string,map<profile,float>> proportions_per_bd_type;
 	int action_type;
 
 	int file_cpt <- 1;
 	bool load_grid_file <- false;
 	map<string,graph> graph_per_mode;
+	
+	geometry shape <- envelope(nyc_bounds0_shape_file);
+	float step <- sqrt(shape.area) /500.0 ;
+	
+	map<string,list<float>> speed_per_mobility <- ["car"::[20.0,40.0], "bike"::[5.0,15.0], "walk"::[3.0,7.0]];
 	
 	//image des boutons
 	list<file> images <- [
@@ -49,9 +59,22 @@ global {
 		create road from: split_lines(global_line);
 		do update_graphs;
 		do init_buttons;
-		
+		do load_profiles;
 	}
 	
+	action load_profiles {
+		create profile from: csv_file(profile_file,";", true) with: [proportionS::float(get("proportionS")),proportionM::float(get("proportionM")),proportionL::float(get("proportionL")),
+			name::string(get("typo")), max_dist_walk::float(get("max_dist_walk")),max_dist_bike::float(get("max_dist_bike"))
+		];
+		ask profile {
+			map<profile, float> prof_pro1 <- proportions_per_bd_type["S"];
+			prof_pro1[self] <- proportionS; proportions_per_bd_type["S"] <- prof_pro1;
+			map<profile, float> prof_pro2 <- proportions_per_bd_type["M"];
+			prof_pro2[self] <- proportionM; proportions_per_bd_type["M"] <- prof_pro2;
+			map<profile, float> prof_pro3 <- proportions_per_bd_type["L"];
+			prof_pro3[self] <- proportionL; proportions_per_bd_type["L"] <- prof_pro3;
+		}
+	}
 	action update_graphs {
 		loop mode over: ["walk", "car", "bike"] {
 			graph_per_mode[mode] <- as_edge_graph(road where (mode in each.allowed_mobility));
@@ -258,14 +281,38 @@ species road {
 	}
 	
 }
+
+
+species profile {
+	float proportionS;
+	float proportionM;
+	float proportionL;
+	float max_dist_walk;
+	float max_dist_bike;
+}
 species people skills: [moving]{
 	string mobility_mode <- "walk"; 
 	building origin;
 	building dest;
 	bool to_destination <- true;
 	point target;
-
+	profile my_profile;
+	float display_size <- sqrt(world.shape.area)* 0.01;
+	action choose_mobility {
+		float dist <- manhattan_distance(origin.location, dest.location);
+		if (dist <= my_profile.max_dist_walk ) {
+			mobility_mode <- "walk";
+		} else if (dist <= my_profile.max_dist_bike ) {
+			mobility_mode <- "bike";
+		} else {
+			mobility_mode <- "car";
+		}
+		speed <- rnd(speed_per_mobility[mobility_mode][0],speed_per_mobility[mobility_mode][1]) #km/#h;
+	}
 	
+	float manhattan_distance (point p1, point p2) {
+		return abs(p1.x - p2.x) + abs(p1.y - p2.y);
+	}
 	action reinit_destination {
 		dest <- empty(offices) ? nil : offices.keys[rnd_choice(offices.values)];
 		target <- nil;
@@ -274,13 +321,14 @@ species people skills: [moving]{
 	action update_target {
 		if (to_destination) {target <- any_location_in(dest);}//centroid(dest);}
 		else {target <- any_location_in(origin);}//centroid(origin);}
+		do choose_mobility;
 	}
 
 	reflex move when: dest != nil{
 		if (target = nil) {
 			do update_target;
 		}
-		do goto target: target on: graph_per_mode[mobility_mode];
+		do goto target: target on: graph_per_mode[mobility_mode] ;
 		if (target = location) {
 			target <- nil;
 			to_destination <- not to_destination;
@@ -292,13 +340,13 @@ species people skills: [moving]{
 	}
 	
     aspect default {
-    	if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
+    	if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90;}
 	}
 	
 	aspect tridefault {
 //		if (target != nil or dest = nil) {draw square(1.0) color: #white;}
 		float scale <- min([1,road(current_edge).traffic_density / 100])^2;
-		if (target != nil or dest = nil) {draw square(1.0) color: colormap_per_mode["car"][int(4*scale)];}
+		if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)];}
 		//		if current_path != nil{
 //			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
 //			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
@@ -306,7 +354,7 @@ species people skills: [moving]{
 
 	}
 }
-grid cell width: 8 height: 8 {
+grid cell width: 8 height: 16 {
 	building my_building;
 	rgb color <- #lightgray;
 	action new_residential(string the_size) {
@@ -323,6 +371,8 @@ grid cell width: 8 height: 8 {
 				origin.inhabitants << self;
 				location <- any_location_in(origin.bounds);
 				do reinit_destination;
+				map<profile, float> prof_pro <- proportions_per_bd_type[origin.size];
+				my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
 			}
 
 		}
@@ -352,7 +402,7 @@ grid button width:3 height:4
 	int action_nb;
 	rgb bord_col<-#black;
 	aspect normal {
-		if (action_nb > 2 and not (action_nb in [11])) {draw rectangle(shape.width * 0.8,shape.height * 0.8).contour + 0.5 color: bord_col;}
+		if (action_nb > 2 and not (action_nb in [11])) {draw rectangle(shape.width * 0.8,shape.height * 0.8).contour + (shape.height * 0.01) color: bord_col;}
 		if (action_nb = 0) {draw "Build residential building"  color:#black font:font("SansSerif", 16, #bold) at: location - {15,-10.0,0};}
 		else if (action_nb = 1) {draw "Build office building"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
 		else if (action_nb = 2) {draw "Tools"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
