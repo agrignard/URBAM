@@ -19,11 +19,15 @@ global {
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
 	
+	kml kml_export;
+	bool expert_to_kml <- false;
+	int nb_cycles_between_save <- 50;
+	int cycle_to_export <- 500;
+	
+	
 	
 	map<string,int> offsets <- ["car"::0, "bike"::-1, "walk"::1];
-	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90)];
-	
-	
+	map<string,rgb> color_per_mode <- ["car"::#red, "bike"::#blue, "walk"::#green];
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
 	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
@@ -42,7 +46,7 @@ global {
 	int action_type;
 
 	int file_cpt <- 1;
-	bool load_grid_file <- false;
+	bool load_grid_file <- true;
 	map<string,graph> graph_per_mode;
 	
 	float road_capacity <- 10.0;
@@ -140,6 +144,23 @@ global {
 //			if current_edge != nil{
 //				(current_edge as road).traffic_density  <- (current_edge as road).traffic_density + 1;
 //			}
+		}
+	}
+	
+	reflex export_to_kml when: expert_to_kml and every(nb_cycles_between_save) and cycle <= cycle_to_export{
+		date init_date <- current_date minus_seconds (step*nb_cycles_between_save);
+		ask road {
+			if nb_people > 0  {
+				rgb col <- rgb(255,255 * (1-nb_people/road_capacity), 255 * (1-nb_people/road_capacity));
+				kml_export <- kml_export add_geometry (shape,nb_people*2.0,col, col, init_date ,current_date);	
+			}	
+		}
+		ask building {
+			kml_export <- kml_export add_geometry (shape,2.0,#black, rgb(color_per_type[type], size = "S" ? 50 : (size = "M" ? 100: 255)  ),init_date ,current_date);
+		}
+		if (cycle = cycle_to_export) {
+			save kml_export to:"result.kmz" type:"kmz";
+		
 		}
 	}
 	
@@ -318,12 +339,13 @@ species road {
 				}	
 			}
 			match "split"{
-				float scale <- min([1,traffic_density["car"] / 90]);				
+				float scale <- min([1,traffic_density["car"] / 100]);				
+		//	draw shape + scale_factor color: rgb([255+(52-255)*scale1,255+(152-255)*scale1,255+(219-255)*scale1]) at: self.location+{offsets["car"],offsets["car"]};
 				draw shape + scale_factor color: rgb(52,152,219,scale) at: self.location+{offsets["car"],offsets["car"]};
 				scale <- min([1,traffic_density["bike"] / 10]);
-				draw shape + scale_factor color: rgb(192,57,43,scale) at: self.location+{scale_factor*spacing*offsets["bike"],scale_factor*spacing*offsets["bike"]};
+				draw shape + scale_factor color: rgb([255+(192-255)*scale,255+(57-255)*scale,255+(43-255)*scale]) at: self.location+{scale_factor*spacing*offsets["bike"],scale_factor*spacing*offsets["bike"]};
 				scale <- min([1,traffic_density["walk"] / 1]);
-				draw shape + scale_factor color: rgb(161,196,90,scale) at: self.location+{scale_factor*spacing*offsets["walk"],scale_factor*spacing*offsets["walk"]};
+				draw shape + scale_factor color: rgb([255+(161-255)*scale,255+(196-255)*scale,255+(90-255)*scale]) at: self.location+{scale_factor*spacing*offsets["walk"],scale_factor*spacing*offsets["walk"]};
 			}		
 		}	
 	}
@@ -411,16 +433,16 @@ species people skills: [moving]{
 	aspect default{
 		switch people_aspect {
 			match "default" {
-				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90 at: location+{scale_factor*spacing*offsets[mobility_mode],scale_factor*spacing*offsets[mobility_mode]};}	
+				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90;}	
 			}	
 			match "profile" {
-				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90 at: location+{scale_factor*spacing*offsets[mobility_mode],scale_factor*spacing*offsets[mobility_mode]};}
+				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90;}
 			}
 			match "dynamic_abstract"{		
 				//		if (target != nil or dest = nil) {draw triangle(1.0) color: color_per_mode[mobility_mode] rotate:heading +90;}
 				//		if (target != nil or dest = nil) {draw square(1.0) color: #white;}
 				float scale <- min([1,sum(road(current_edge).traffic_density) / 100])^2;
-				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)] at: location+{scale_factor*spacing*offsets[mobility_mode],scale_factor*spacing*offsets[mobility_mode]};}
+				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)];}
 			//		if current_path != nil{
 			//			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
 			//			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
@@ -494,10 +516,10 @@ grid button width:3 height:4
 }
 
 experiment city type: gui autorun: true{
+
 	parameter 'Roads aspect:' var: road_aspect category: 'Aspect' <-"split" among:["default", "hide","road type","edge color","split"];
 //	parameter 'Show cells:' var: show_cells category: 'Aspect' <-"show" among:["show", "hide"];
 	parameter 'People aspect:' var: people_aspect category: 'Aspect' <-"default" among:["default", "profile","dynamic_abstract","hide"];
-	parameter 'Spacing' var: spacing category: 'Aspect' <- 4.0 min:0.0 max: 10.0;
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
@@ -514,7 +536,11 @@ experiment city type: gui autorun: true{
 			event["4"] action: {people_aspect<-"default";};
 			event["5"] action: {people_aspect<-"profile";};
 			event["6"] action: {people_aspect<-"dynamic_abstract";};
-			event["7"] action: {people_aspect<-"hide";};    
+			event["7"] action: {people_aspect<-"hide";};   
+			
+			graphics "toto" {
+				draw union(nyc_bounds0_shape_file.contents) color: #pink;
+			} 
 		}
 		
 	    //Bouton d'action
