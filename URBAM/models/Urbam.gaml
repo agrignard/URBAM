@@ -10,20 +10,22 @@ model Urbam
 
 global {
 	//PARAMETERS
-	string road_aspect <- "default";
-	string people_aspect <- "default";
-	bool show_cells <- true;
-	float building_scale;
-	float line_width;
-	float road_width;
-
+			
+	string road_aspect parameter: 'Roads aspect:' category: 'Road Apsect' <-"default" among:["default", "hide","road type","edge color","split (3)", "split (5)"];	
+	float building_scale parameter: 'Building scale:' category: 'Road Apsect' <- 0.65 min: 0.2 max: 1.0; 
+	bool show_cells parameter: 'Show cells:' category: 'Road Apsect' <- true;
+	float spacing parameter: 'Spacing ' category: 'Road Apsect' <- 1.0 min:0.0 max: 1.5;
+	float line_width parameter: 'Line width' category: 'Road Apsect' <- 1.0 min:0.0 max: 2.0;
+	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"default" among:["default", "profile","dynamic_abstract","hide"];
+	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
+	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
+	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" ;
 	
+	
+	float road_width;
 	float block_size;
-	float spacing;
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
-	
-
 	//kml kml_export;
 	bool expert_to_kml <- false;
 	int nb_cycles_between_save <- 50;
@@ -39,19 +41,16 @@ global {
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
 	map<string,float> nb_people_per_size <- ["S"::10.0, "M"::50.0, "L"::100.0];
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
-	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],
-		5::["office","M"],6::["office","L"]];
-	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
-	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
-	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" ;
-	
+	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],5::["office","M"],6::["office","L"]];
+		
+
 	float weight_car_prev <- weight_car;
 	float weight_bike_prev <- weight_bike;
 	float weight_pev_prev <- weight_pev;
 	
 	list<building> residentials;
 	map<building, float> offices;
-	string imageFolder <- "../images/";
+	string imageFolder <- "../images/flat/";
 	string profile_file <- "../includes/profiles.csv"; 
 	map<string,map<profile,float>> proportions_per_bd_type;
 	int action_type;
@@ -150,7 +149,7 @@ global {
 		
 	}
 	
-	reflex test_load_file when: load_grid_file and every(100#cycle) and file_cpt < 4{
+	reflex test_load_file when: load_grid_file and every(100#cycle) and file_cpt < 2{
 		do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
 		file_cpt <- file_cpt+ 1;
 	}
@@ -398,9 +397,6 @@ species road {
 				draw shape + line_width * block_size/80 color: rgb(192,57,43,scale) at: self.location-{0.5*road_width*spacing*(mode_order["bike"]+0.5)/(length(mode_order)+0.5),0.5*road_width*spacing*(mode_order["bike"]+0.5)/(length(mode_order)+0.5)};
 				scale <- min([1,traffic_density["walk"][1] / 1]);
 				draw shape + line_width * block_size/80 color: rgb(161,196,90,scale) at: self.location-{0.5*road_width*spacing*(mode_order["walk"]+0.5)/(length(mode_order)+0.5),0.5*road_width*spacing*(mode_order["walk"]+0.5)/(length(mode_order)+0.5)};
-		
-				
-				
 			}		
 		}	
 	}
@@ -420,12 +416,12 @@ species profile {
 species people skills: [moving]{
 	int heading_index <- 0;
 	string mobility_mode <- "walk"; 
+	float display_size <-sqrt(world.shape.area)* 0.01;
 	building origin;
 	building dest;
 	bool to_destination <- true;
 	point target;
 	profile my_profile;
-	float display_size <- sqrt(world.shape.area)* 0.01;
 	bool know_pev <- false;
 	bool has_car <- flip(weight_car);
 	bool has_bike <- flip(weight_bike);
@@ -535,7 +531,7 @@ species people skills: [moving]{
 		
 	}
 }
-grid cell width: 8 height: 16 {
+grid cell width: 8 height: 8 {
 	building my_building;
 	//rgb color <- #white;
 	action new_residential(string the_size) {
@@ -593,17 +589,12 @@ grid button width:3 height:4
 		else if (action_nb = 2) {draw "Tools"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
 		else {
 			draw image_file(images[action_nb - 3]) size:{shape.width * 0.7,shape.height * 0.7} ;
+			//draw square(shape.width * 0.7) color:#red;
 		}
 	}
 }
 
 experiment city type: gui autorun: true{
-	parameter 'Roads aspect:' var: road_aspect category: 'Aspect' <-"split (5)" among:["default", "hide","road type","edge color","split (3)", "split (5)"];
-	parameter 'Show cells:' var: show_cells category: 'Aspect' <- true;
-	parameter 'Building scale:' var: building_scale category: 'Aspect' <- 0.65 min: 0.2 max: 1.0; 
-	parameter 'People aspect:' var: people_aspect category: 'Aspect' <-"default" among:["default", "profile","dynamic_abstract","hide"];
-	parameter 'Spacing ' var: spacing category: 'Aspect' <- 1.0 min:0.0 max: 1.5;
-	parameter 'Line width' var: line_width category: 'Aspect' <- 1.0 min:0.0 max: 2.0;
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
@@ -617,11 +608,11 @@ experiment city type: gui autorun: true{
 			event["1"] action: {road_aspect<-"default";};
 			event["2"] action: {road_aspect<-"edge color";};
 			event["3"] action: {road_aspect<-"road type";};
-			event["4"] action: {people_aspect<-"default";};
-			event["5"] action: {people_aspect<-"profile";};
-			event["6"] action: {people_aspect<-"dynamic_abstract";};
-			event["7"] action: {people_aspect<-"hide";};   
-
+			event["4"] action: {road_aspect<-"split (5)";};
+			event["5"] action: {people_aspect<-"default";};
+			event["6"] action: {people_aspect<-"profile";};
+			event["7"] action: {people_aspect<-"dynamic_abstract";};
+			event["8"] action: {people_aspect<-"hide";};   
 		}
 		
 	    //Bouton d'action
