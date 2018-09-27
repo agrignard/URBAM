@@ -392,7 +392,7 @@ species road {
 				draw shape + line_width * block_size/80 color: rgb(192,57,43,scale) at: self.location+{0.5*road_width*spacing*(mode_order["bike"]+0.5)/(length(mode_order)+0.5),0.5*road_width*spacing*(mode_order["bike"]+0.5)/(length(mode_order)+0.5)};
 				scale <- min([1,traffic_density["walk"][0] / 1]);
 				draw shape + line_width * block_size/80 color: rgb(161,196,90,scale) at: self.location+{0.5*road_width*spacing*(mode_order["walk"]+0.5)/(length(mode_order)+0.5),0.5*road_width*spacing*(mode_order["walk"]+0.5)/(length(mode_order)+0.5)};
-				float scale <- min([1,traffic_density["car"][1] / 90]);				
+				scale <- min([1,traffic_density["car"][1] / 90]);				
 				draw shape + line_width * block_size/80 color: rgb(52,152,219,scale) at: self.location-{0.5*road_width*spacing*(mode_order["car"]+0.5)/(length(mode_order)+0.5),0.5*road_width*spacing*(mode_order["car"]+0.5)/(length(mode_order)+0.5)};
 				scale <- min([1,traffic_density["bike"][1] / 10]);
 				draw shape + line_width * block_size/80 color: rgb(192,57,43,scale) at: self.location-{0.5*road_width*spacing*(mode_order["bike"]+0.5)/(length(mode_order)+0.5),0.5*road_width*spacing*(mode_order["bike"]+0.5)/(length(mode_order)+0.5)};
