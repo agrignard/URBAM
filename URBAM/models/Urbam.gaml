@@ -302,7 +302,7 @@ global {
 	
 	reflex tmp{
 		float new_time <- gama.machine_time;
-		write "Cycle computation time: "+ (new_time - old_time);
+//		write "Cycle computation time: "+ (new_time - old_time);
 		old_time <- new_time;
 		
 	}
