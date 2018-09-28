@@ -16,7 +16,7 @@ global {
 	bool show_cells parameter: 'Show cells:' category: 'Road Apsect' <- true;
 	float spacing parameter: 'Spacing ' category: 'Road Apsect' <- 1.0 min:0.0 max: 1.5;
 	float line_width parameter: 'Line width' category: 'Road Apsect' <- 1.0 min:0.0 max: 2.0;
-	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"default" among:["default", "profile","dynamic_abstract","hide"];
+	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"default" among:["default", "shape","profile","dynamic_abstract","hide"];
 	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
 	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" ;
@@ -33,6 +33,8 @@ global {
 	
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
+	int global_shape_size<-50;
+	map<string,geometry> shape_per_mode <- ["car"::square(global_shape_size), "bike"::triangle(global_shape_size), "walk"::circle(global_shape_size/2), "pev"::triangle(global_shape_size)];
 	
 	
 	map<string,int> offsets <- ["car"::0, "bike"::-1, "walk"::1, "pev"::-1];
@@ -62,7 +64,8 @@ global {
 	float road_capacity <- 10.0;
 	bool traffic_jam <- true parameter: true;
 	
-	geometry shape <- envelope(nyc_bounds0_shape_file);
+	//geometry shape <- envelope(nyc_bounds0_shape_file);
+	geometry shape<-square(5000);
 	float step <- sqrt(shape.area) /2000.0 ;
 	
 	map<string,list<float>> speed_per_mobility <- ["car"::[20.0,40.0], "bike"::[5.0,15.0], "walk"::[3.0,7.0], "pev"::[15.0,30.0]];
@@ -516,6 +519,9 @@ species people skills: [moving]{
 			match "default" {
 				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;}	
 			}	
+			match "shape" {	
+				if (target != nil or dest = nil) {draw shape_per_mode[mobility_mode]  color: color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;}	
+			}	
 			match "profile" {
 				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90 at: location+offset;}
 			}
@@ -531,7 +537,7 @@ species people skills: [moving]{
 		
 	}
 }
-grid cell width: 8 height: 8 {
+grid cell width: 16 height: 16{
 	building my_building;
 	//rgb color <- #white;
 	action new_residential(string the_size) {
