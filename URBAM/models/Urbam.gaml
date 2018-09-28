@@ -9,11 +9,7 @@ model Urbam
 
 
 global {
-	
-	float old_time;
 	//PARAMETERS
-			
-
 	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"default" among:["default", "hide","road type","edge color","split (3)", "split (5)"];	
 	float building_scale parameter: 'Building scale:' category: 'Road Aspect' <- 0.65 min: 0.2 max: 1.0; 
 	bool show_cells parameter: 'Show cells:' category: 'Road Aspect' <- true;
@@ -33,11 +29,11 @@ global {
 	bool expert_to_kml <- false;
 	int nb_cycles_between_save <- 50;
 	int cycle_to_export <- 500;
+	int global_shape_size<-50;
 	
 	map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::1];
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n write only the modes that have to be drawn
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
-	int global_shape_size<-50;
 	map<string,geometry> shape_per_mode <- ["car"::square(global_shape_size), "bike"::triangle(global_shape_size), "walk"::circle(global_shape_size/2), "pev"::triangle(global_shape_size)];
 	
 	map<string,point> offsets <- ["car"::{0,0}, "bike"::{0,0}, "walk"::{0,0}];
@@ -59,6 +55,9 @@ global {
 	string profile_file <- "../includes/profiles.csv"; 
 	map<string,map<profile,float>> proportions_per_bd_type;
 	int action_type;
+	
+	
+	float old_time;
 
 	int file_cpt <- 1;
 	bool load_grid_file <- false;
@@ -190,9 +189,7 @@ global {
 		loop t over: mode_order.keys{
 			if road_aspect = "split (3)" {offsets[t] <- {0.5*road_width*spacing*(mode_order[t]-1),0.5*road_width*spacing*(mode_order[t]-1)};}
 			if road_aspect = "split (5)" {offsets[t] <- {0.5*road_width*spacing*(mode_order[t]+0.5)/(length(mode_order)+0.5),0.5*road_width*spacing*(mode_order[t]+0.5)/(length(mode_order)+0.5)};}
-		}
-		
-		
+		}		
 	}
 	
 	/*reflex export_to_kml when: expert_to_kml and every(nb_cycles_between_save) and cycle <= cycle_to_export{
@@ -304,7 +301,6 @@ global {
 		float new_time <- gama.machine_time;
 //		write "Cycle computation time: "+ (new_time - old_time);
 		old_time <- new_time;
-		
 	}
 }
 
