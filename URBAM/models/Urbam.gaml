@@ -13,6 +13,7 @@ global {
 	float old_time;
 	//PARAMETERS
 			
+
 	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"default" among:["default", "hide","road type","edge color","split (3)", "split (5)"];	
 	float building_scale parameter: 'Building scale:' category: 'Road Aspect' <- 0.65 min: 0.2 max: 1.0; 
 	bool show_cells parameter: 'Show cells:' category: 'Road Aspect' <- true;
@@ -36,6 +37,8 @@ global {
 	map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::1];
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n write only the modes that have to be drawn
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
+	int global_shape_size<-50;
+	map<string,geometry> shape_per_mode <- ["car"::square(global_shape_size), "bike"::triangle(global_shape_size), "walk"::circle(global_shape_size/2), "pev"::triangle(global_shape_size)];
 	
 	map<string,point> offsets <- ["car"::{0,0}, "bike"::{0,0}, "walk"::{0,0}];
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
@@ -64,7 +67,8 @@ global {
 	float road_capacity <- 10.0;
 	bool traffic_jam <- true parameter: true;
 	
-	geometry shape <- envelope(nyc_bounds0_shape_file);
+	//geometry shape <- envelope(nyc_bounds0_shape_file);
+	geometry shape<-square(5000);
 	float step <- sqrt(shape.area) /2000.0 ;
 	
 	map<string,list<float>> speed_per_mobility <- ["car"::[20.0,40.0], "bike"::[5.0,15.0], "walk"::[3.0,7.0], "pev"::[15.0,30.0]];
@@ -520,6 +524,9 @@ species people skills: [moving]{
 			match "default" {
 				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;}	
 			}	
+			match "shape" {	
+				if (target != nil or dest = nil) {draw shape_per_mode[mobility_mode]  color: color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;}	
+			}	
 			match "profile" {
 				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90 at: location+offset;}
 			}
@@ -535,7 +542,7 @@ species people skills: [moving]{
 		
 	}
 }
-grid cell width: 8 height: 8 {
+grid cell width: 16 height: 16{
 	building my_building;
 	//rgb color <- #white;
 	action new_residential(string the_size) {
