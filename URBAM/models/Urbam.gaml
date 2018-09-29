@@ -392,8 +392,9 @@ species road {
 				}
 			}
 			match "edge color"{		
-				if total_traffic() > 0 {
-					float scale <- min([1,total_traffic() / 100])^2;
+				int traffic <-total_traffic() ; 
+				if traffic > 0 {
+					float scale <- min([1,traffic / 100])^2;
 					draw shape + computed_line_width color: colormap_per_mode["car"][int(4*scale)];
 				}	
 			}
