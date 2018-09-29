@@ -15,7 +15,7 @@ global {
 	bool show_cells parameter: 'Show cells:' category: 'Road Aspect' <- true;
 	float spacing parameter: 'Spacing ' category: 'Road Aspect' <- 1.0 min:0.0 max: 1.5;
 	float line_width parameter: 'Line width' category: 'Road Aspect' <- 1.0 min:0.0 max: 3.0;
-	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"default" among:["default", "profile","dynamic_abstract","hide"];
+	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"default" among:["default", "shape", "profile","dynamic_abstract","hide"];
 	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
 	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" ;
@@ -44,6 +44,7 @@ global {
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],5::["office","M"],6::["office","L"]];
 		
+
 
 	float weight_car_prev <- weight_car;
 	float weight_bike_prev <- weight_bike;
@@ -521,7 +522,7 @@ species people skills: [moving]{
 				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;}	
 			}	
 			match "shape" {	
-				if (target != nil or dest = nil) {draw shape_per_mode[mobility_mode]  color: color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;}	
+				if (target != nil or dest = nil) {draw copy(shape_per_mode[mobility_mode])  color: color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;}	
 			}	
 			match "profile" {
 				if (target != nil or dest = nil) {draw triangle(display_size) color: color_per_profile[my_profile.name] rotate:heading +90 at: location+offset;}
