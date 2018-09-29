@@ -25,6 +25,12 @@ global {
 	float block_size;
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
+	bool on_modification_cells <- false update: show_cells != show_cells_prev;
+	
+	bool show_cells_prev <- show_cells update: show_cells ;
+	bool on_modification_bds <- false update: false;
+	
+	
 	//kml kml_export;
 	bool expert_to_kml <- false;
 	int nb_cycles_between_save <- 50;
@@ -264,6 +270,7 @@ global {
 			if (action_type = 9) {ask selected_cell {do new_residential("L");}} 
 			if (action_type = 10) {ask selected_cell {do new_office("L");}} 
 		}
+		on_modification_bds <- true;
 	}
 	
 	 
@@ -406,8 +413,6 @@ species road {
 			}		
 		}	
 	}
-
-	
 }
 
 
@@ -435,17 +440,17 @@ species people skills: [moving]{
 		if (origin != nil and dest != nil and my_profile != nil) {
 			float dist <- manhattan_distance(origin.location, dest.location);
 			if (dist <= my_profile.max_dist_walk ) {
-				mobility_mode <- "walk";
+					mobility_mode <- "walk";
 			} else if (has_bike and dist <= my_profile.max_dist_bike ) {
-				mobility_mode <- "bike";
+					mobility_mode <- "bike";
 			} else if (know_pev and (dist <= my_profile.max_dist_pev )) {
-				mobility_mode <- "pev";
+					mobility_mode <- "pev";
 			} else if has_car {
-				mobility_mode <- "car";
+					mobility_mode <- "car";
 			} else {
-				mobility_mode <- "walk";
+					mobility_mode <- "walk";
 			}
-			speed <- rnd(speed_per_mobility[mobility_mode][0],speed_per_mobility[mobility_mode][1]) #km/#h;
+		speed <- rnd(speed_per_mobility[mobility_mode][0],speed_per_mobility[mobility_mode][1]) #km/#h;
 		}
 	}
 	
@@ -503,7 +508,6 @@ species people skills: [moving]{
 	reflex wander when: dest = nil and origin != nil {
 		do wander bounds: origin.bounds;
 	}
-	
 
 	
 	aspect default{
@@ -551,10 +555,10 @@ grid cell width: 16 height: 16{
 			create building returns: bds{
 				do initialize(myself, "residential", the_size);
 			}
-			create people number: nb_people_per_size[first(bds).size]{
+			create people number: nb_people_per_size[first(bds).size] with: [location::any_location_in(first(bds).bounds)] {
 				origin <- first(bds);
 				origin.inhabitants << self;
-				location <- any_location_in(origin.bounds);
+				
 				do reinit_destination;
 				map<profile, float> prof_pro <- proportions_per_bd_type[origin.size];
 				my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
@@ -606,10 +610,10 @@ experiment city type: gui autorun: true{
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
 		display map synchronized:true{
-			species cell;// lines: #white;
+			species cell  refresh: on_modification_cells;// lines: #white;
 			species road ;
 			species people;
-			species building;
+			species building refresh: on_modification_bds;
 			event mouse_down action:infrastructure_management;
 			event["0"] action: {road_aspect<-"hide";};
 			event["1"] action: {road_aspect<-"default";};
