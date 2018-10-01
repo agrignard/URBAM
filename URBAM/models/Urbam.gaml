@@ -411,7 +411,12 @@ species road {
 		switch road_aspect {
 			match "default" {
 				if total_traffic() > 0 {
-					draw shape + computed_line_width * min([1,total_traffic() / max_traffic_per_mode["car"]]) color: color_per_mode["car"];
+					float scale <- min([1,total_traffic() / max_traffic_per_mode["car"]]);
+					if dynamical_width{
+						draw shape + computed_line_width * scale color: color_per_mode["car"];	
+					}else{
+						draw shape + computed_line_width color: color_map(color_per_mode["car"],scale);	
+					}
 				}	
 			}	
 			match "road type" {
