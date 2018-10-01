@@ -13,8 +13,9 @@ global {
 	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"default" among:["default", "hide","road type","edge color","split (3)", "split (5)"];	
 	float building_scale parameter: 'Building scale:' category: 'Road Aspect' <- 0.65 min: 0.2 max: 1.0; 
 	bool show_cells parameter: 'Show cells:' category: 'Road Aspect' <- true;
-	float spacing parameter: 'Spacing ' category: 'Road Aspect' <- 1.0 min:0.0 max: 1.5;
-	float line_width parameter: 'Line width' category: 'Road Aspect' <- 1.0 min:0.0 max: 3.0;
+	float spacing parameter: 'Spacing ' category: 'Road Aspect' <- 0.65 min:0.0 max: 1.5;
+	float line_width parameter: 'Line width' category: 'Road Aspect' <- 0.5 min:0.0 max: 2.0;
+	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
 	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"default" among:["default", "shape", "profile","dynamic_abstract","hide"];
 	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
@@ -38,7 +39,7 @@ global {
 	int cycle_to_export <- 500;
 	int global_shape_size<-35;
 	
-	map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::1];
+	map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::50];
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n write only the modes that have to be drawn
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
 	map<string,geometry> shape_per_mode <- ["car"::rectangle(global_shape_size/2,global_shape_size), "bike"::triangle(global_shape_size), "walk"::circle(global_shape_size/4), "pev"::triangle(global_shape_size)];
@@ -64,8 +65,6 @@ global {
 	map<string,map<profile,float>> proportions_per_bd_type;
 	int action_type;
 	
-	
-	float old_time;
 
 	int file_cpt <- 1;
 	bool load_grid_file <- false;
@@ -93,7 +92,6 @@ global {
 		file(imageFolder +"empty.png")
 	]; 
 	init {
-		old_time <- gama.machine_time;
 		list<geometry> lines;
 		ask cell {
 			lines << shape.contour;
@@ -190,14 +188,26 @@ global {
 	
 	reflex precalculate_display_variables{
 		road_width <- block_size * 2/3 * (1-building_scale);
-		if road_aspect =  "split (5)" {
-			computed_line_width <- line_width * block_size/80;
-		}else{
-			computed_line_width <- line_width * block_size/40;
+//		if road_aspect =  "split (5)" {
+//			computed_line_width <- line_width * block_size/80;
+//		}else{
+//			computed_line_width <- line_width * block_size/40;
+//		}
+		switch road_aspect {
+			match  "split (3)" {
+				computed_line_width <- line_width * road_width/6;
+			}
+			match  "split (5)" {
+				computed_line_width <- line_width * road_width/10;
+			}
+			default{
+				computed_line_width <- 0.5*line_width*road_width;
+			}
 		}
+		
 		loop t over: mode_order.keys{
 			if road_aspect = "split (3)" {offsets[t] <- {0.5*road_width*spacing*(mode_order[t]-1),0.5*road_width*spacing*(mode_order[t]-1)};}
-			if road_aspect = "split (5)" {offsets[t] <- {0.5*road_width*spacing*(mode_order[t]+0.5)/(length(mode_order)+0.5),0.5*road_width*spacing*(mode_order[t]+0.5)/(length(mode_order)+0.5)};}
+			if road_aspect = "split (5)" {offsets[t] <- {0.5*road_width*spacing*(mode_order[t]+0.5)/(length(mode_order)-0.5),0.5*road_width*spacing*(mode_order[t]+0.5)/(length(mode_order)-0.5)};}
 		}		
 	}
 	
@@ -325,14 +335,11 @@ global {
       	  }      
         }	
 	}
-	
-	
-	reflex tmp{
-		float new_time <- gama.machine_time;
-//		write "Cycle computation time: "+ (new_time - old_time);
-		old_time <- new_time;
-	}
+		
 }
+
+
+
 
 
 species building {
@@ -394,12 +401,17 @@ species road {
 	int total_traffic_per_mode(string m){
 		return sum(traffic_density[m]);
 	}
+	
+	
+	rgb color_map(rgb c, float scale){
+		return rgb(255+scale * (c.red - 255),255+scale * (c.green - 255),255+scale * (c.blue - 255));
+	}
 
 	aspect default {
 		switch road_aspect {
 			match "default" {
 				if total_traffic() > 0 {
-					draw shape + computed_line_width * total_traffic()/50 color: rgb(52,152,219);
+					draw shape + computed_line_width * min([1,total_traffic() / max_traffic_per_mode["car"]]) color: color_per_mode["car"];
 				}	
 			}	
 			match "road type" {
@@ -422,16 +434,28 @@ species road {
 			}
 			match "split (3)"{
 				loop t over: mode_order.keys{
-					float scale <- min([1,total_traffic_per_mode(t) / max_traffic_per_mode[t]]);				
-					if scale > 0 {draw shape + computed_line_width color: rgb(color_per_mode[t],scale) at: self.location+offsets[t];}
+					float scale <- min([1,total_traffic_per_mode(t) / max_traffic_per_mode[t]]);		
+					if scale > 0 {
+						if dynamical_width{
+							draw shape + computed_line_width * scale color: color_per_mode[t] at: self.location+offsets[t];	
+						}else{
+							draw shape + computed_line_width color: color_map(color_per_mode[t],scale) at: self.location+offsets[t];	
+						}
+					}
 				}
 			}	
 			match "split (5)"{
 				loop t over: mode_order.keys{
 					float scale <- min([1,traffic_density[t][0] / max_traffic_per_mode[t]]);	
-					if scale > 0 {draw shape + computed_line_width color: rgb(color_per_mode[t],scale) at: self.location+offsets[t];}
-					scale <- min([1,traffic_density[t][1] / max_traffic_per_mode[t]]);	
-					if scale > 0 {draw shape + computed_line_width color: rgb(color_per_mode[t],scale) at: self.location-offsets[t];}
+					if dynamical_width{
+						if scale > 0 {draw shape + computed_line_width * scale color: color_per_mode[t] at: self.location+offsets[t];}
+						scale <- min([1,traffic_density[t][1] / max_traffic_per_mode[t]]);	
+						if scale > 0 {draw shape + computed_line_width * scale color: color_per_mode[t] at: self.location-offsets[t];}
+					}else{
+						if scale > 0 {draw shape + computed_line_width color: color_map(color_per_mode[t],scale) at: self.location+offsets[t];}
+						scale <- min([1,traffic_density[t][1] / max_traffic_per_mode[t]]);	
+						if scale > 0 {draw shape + computed_line_width color: color_map(color_per_mode[t],scale) at: self.location-offsets[t];}
+					}
 				}
 			}		
 		}	
