@@ -20,6 +20,7 @@ global {
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
 	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" ;
 	
+	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/citymatrix_volpe";
 	float computed_line_width;
 	float road_width;
 	float block_size;
@@ -35,12 +36,12 @@ global {
 	bool expert_to_kml <- false;
 	int nb_cycles_between_save <- 50;
 	int cycle_to_export <- 500;
-	int global_shape_size<-50;
+	int global_shape_size<-35;
 	
 	map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::1];
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n write only the modes that have to be drawn
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
-	map<string,geometry> shape_per_mode <- ["car"::square(global_shape_size), "bike"::triangle(global_shape_size), "walk"::circle(global_shape_size/2), "pev"::triangle(global_shape_size)];
+	map<string,geometry> shape_per_mode <- ["car"::rectangle(global_shape_size/2,global_shape_size), "bike"::triangle(global_shape_size), "walk"::circle(global_shape_size/4), "pev"::triangle(global_shape_size)];
 	
 	map<string,point> offsets <- ["car"::{0,0}, "bike"::{0,0}, "walk"::{0,0}];
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
@@ -67,7 +68,7 @@ global {
 	float old_time;
 
 	int file_cpt <- 1;
-	bool load_grid_file <- false;
+	bool load_grid_file <- true;
 	map<string,graph> graph_per_mode;
 	
 	float road_capacity <- 10.0;
@@ -163,7 +164,8 @@ global {
 	}
 	
 	reflex test_load_file when: load_grid_file and every(100#cycle) and file_cpt < 2{
-		do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
+		do load_cityIO_matrix("https://cityio.media.mit.edu/api/table/citymatrix_volpe");
+		//do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
 		file_cpt <- file_cpt+ 1;
 	}
 	
@@ -273,7 +275,24 @@ global {
 		on_modification_bds <- true;
 	}
 	
-	 
+	action createCell(int id, int x, int y){
+		list<string> types <- id_to_building_type[id];
+		string type <- types[0];
+		string size <- types[1];
+		cell current_cell <- cell[x,y];
+		bool new_building <- true;
+		if (current_cell.my_building != nil) {
+			building build <- current_cell.my_building;
+			new_building <- (build.type != type) or (build.size != size);
+		}
+		if (new_building) {
+			if (type = "residential") {
+				ask current_cell {do new_residential(size);}
+			} else if (type = "office") {
+				ask current_cell {do new_office(size);}
+			}
+		}
+	} 
 	action load_matrix(string path_to_file) {
 		file my_csv_file <- csv_file(path_to_file,",");
 		matrix data <- matrix(my_csv_file);
@@ -282,26 +301,29 @@ global {
 				if (data[j, i] != -1) {
 					int id <- int(data[j, i]);
 					if (id > 0) {
-						list<string> types <- id_to_building_type[id];
-						string type <- types[0];
-						string size <- types[1];
-						cell current_cell <- cell[j,i];
-						bool new_building <- true;
-						if (current_cell.my_building != nil) {
-							building build <- current_cell.my_building;
-							new_building <- (build.type != type) or (build.size != size);
-						}
-						if (new_building) {
-							if (type = "residential") {
-								ask current_cell {do new_residential(size);}
-							} else if (type = "office") {
-								ask current_cell {do new_office(size);}
-							}
-						}
+                     do createCell(id, j, i);
 					}
 				}
 			}
 		}
+	}
+	
+	action load_cityIO_matrix(string cityIOUrl) {
+		map<string, unknown> cityMatrixData;
+	    list<map<string, int>> cityMatrixCell;	
+		try {
+			cityMatrixData <- json_file(cityIOUrl).contents;
+		} catch {
+			cityMatrixData <- json_file("../includes/cityIO_Kendall.json").contents;
+			write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_Kendall.json";
+		}
+		cityMatrixCell <- cityMatrixData["grid"];	
+		loop l over: cityMatrixCell { 
+      	  int id <-int(l["type"]);
+      	  if(id>0){
+      	  	do createCell(id, l["x"], l["y"]);	
+      	  }      
+        }	
 	}
 	
 	
@@ -548,7 +570,6 @@ grid cell width: 16 height: 16{
 	building my_building;
 	//rgb color <- #white;
 	action new_residential(string the_size) {
-
 		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
 			return;
 		} else {
