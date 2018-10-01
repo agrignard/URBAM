@@ -68,7 +68,7 @@ global {
 	float old_time;
 
 	int file_cpt <- 1;
-	bool load_grid_file <- true;
+	bool load_grid_file <- false;
 	map<string,graph> graph_per_mode;
 	
 	float road_capacity <- 10.0;
