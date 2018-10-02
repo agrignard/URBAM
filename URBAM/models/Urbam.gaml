@@ -16,7 +16,15 @@ global {
 	float spacing parameter: 'Spacing ' category: 'Road Aspect' <- 0.65 min:0.0 max: 1.5;
 	float line_width parameter: 'Line width' category: 'Road Aspect' <- 0.5 min:0.0 max: 2.0;
 	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
-	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"default" among:["default", "shape", "profile","dynamic_abstract","hide"];
+	
+	
+	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"shape" among:["default", "shape", "profile","dynamic_abstract","hide"];
+	int global_shape_size parameter: 'People Size:' category: 'People Aspect' <-50 min:10 max:100;
+	
+	
+	bool load_grid_file parameter: 'Online Grid:' category: 'Simulation' <- false;
+	
+	
 	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
 	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" ;
@@ -37,18 +45,18 @@ global {
 	bool expert_to_kml <- false;
 	int nb_cycles_between_save <- 50;
 	int cycle_to_export <- 500;
-	int global_shape_size<-35;
+	
 	
 	map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::50];
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n write only the modes that have to be drawn
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
-	map<string,geometry> shape_per_mode <- ["car"::rectangle(global_shape_size/2,global_shape_size), "bike"::triangle(global_shape_size), "walk"::circle(global_shape_size/4), "pev"::triangle(global_shape_size)];
+	map<string,geometry> shape_per_mode <- ["car"::rectangle(global_shape_size/2,global_shape_size), "bike"::triangle(global_shape_size/2), "walk"::circle(global_shape_size/4), "pev"::triangle(global_shape_size)];
 	
 	map<string,point> offsets <- ["car"::{0,0}, "bike"::{0,0}, "walk"::{0,0}];
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
 	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
-	map<string,float> nb_people_per_size <- ["S"::10.0, "M"::50.0, "L"::100.0];
+	map<string,float> nb_people_per_size <- ["S"::1.0, "M"::5.0, "L"::10.0];
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],5::["office","M"],6::["office","L"]];
 		
@@ -67,7 +75,7 @@ global {
 	
 
 	int file_cpt <- 1;
-	bool load_grid_file <- false;
+
 	map<string,graph> graph_per_mode;
 	
 	float road_capacity <- 10.0;
@@ -161,7 +169,7 @@ global {
 		
 	}
 	
-	reflex test_load_file when: load_grid_file and every(100#cycle) and file_cpt < 2{
+	reflex test_load_file when: load_grid_file and every(100#cycle) {
 		do load_cityIO_matrix("https://cityio.media.mit.edu/api/table/citymatrix_volpe");
 		//do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
 		file_cpt <- file_cpt+ 1;
@@ -313,6 +321,10 @@ global {
 					if (id > 0) {
                      do createCell(id, j, i);
 					}
+					if (id=0){
+						cell current_cell <- cell[j,i];
+						ask current_cell{ do erase_building;}
+					}
 				}
 			}
 		}
@@ -330,16 +342,16 @@ global {
 		cityMatrixCell <- cityMatrixData["grid"];	
 		loop l over: cityMatrixCell { 
       	  int id <-int(l["type"]);
-      	  if(id>0){
-      	  	do createCell(id, l["x"], l["y"]);	
-      	  }      
+      	  if(id!=-2 and id !=-1 and id!=6 ){
+      	  	do createCell(id+1, l["x"], l["y"]);	
+      	  } 
+      	  if (id=-1){
+		    cell current_cell <- cell[l["x"],l["y"]];
+			ask current_cell{ do erase_building;}
+		  }     
         }	
-	}
-		
+	}	
 }
-
-
-
 
 
 species building {
