@@ -10,7 +10,7 @@ model Urbam
 
 global {
 	//PARAMETERS
-	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"hide" among:["default", "hide","road type","edge color","split (3)", "split (5)"];	
+	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"hide" among:["default", "default (car)", "hide","road type","edge color","split (3)", "split (5)"];	
 	float building_scale parameter: 'Building scale:' category: 'Road Aspect' <- 0.65 min: 0.2 max: 1.0; 
 	bool show_cells parameter: 'Show cells:' category: 'Road Aspect' <- true;
 	float spacing parameter: 'Spacing ' category: 'Road Aspect' <- 0.65 min:0.0 max: 1.5;
@@ -18,7 +18,7 @@ global {
 	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
 	
 	
-	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","hide"];
+	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)","hide"];
 	int global_shape_size parameter: 'People Size:' category: 'People Aspect' <-50 min:10 max:100;
 	float people_proportion parameter: 'People Ratio:' category: 'People Aspect' <-1.0 min:0.0 max:1.0;
 	
@@ -436,7 +436,17 @@ species road {
 						draw shape + computed_line_width color: color_map(color_per_mode["car"],scale);	
 					}
 				}	
-			}	
+			}
+			match "default (car)" {
+				if total_traffic_per_mode('car') > 0 {
+					float scale <- min([1,total_traffic_per_mode('car') / max_traffic_per_mode["car"]]);
+					if dynamical_width{
+						draw shape + computed_line_width * scale color: color_per_mode["car"];	
+					}else{
+						draw shape + computed_line_width color: color_map(color_per_mode["car"],scale);	
+					}
+				}	
+			}
 			match "road type" {
 				if ("car" in allowed_mobility) {
 					draw shape + computed_line_width color:color_per_mode["car"];
@@ -618,7 +628,11 @@ species people skills: [moving]{
 			//			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
 			//			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
 			//		}
-			}			
+			}		
+			match "dynamic_abstract (car)"{		
+				float scale <- min([1,road(current_edge).total_traffic_per_mode('car') / 100])^2;
+				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)] at: location+offset;}
+			}		
 		}
 		
 	}
