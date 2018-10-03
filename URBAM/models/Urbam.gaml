@@ -193,7 +193,7 @@ global {
 		ask people{
 			if current_path != nil and current_path.edges != nil{
 				ask list<road>(current_path.edges){
-					traffic_density[myself.mobility_mode][myself.heading_index]  <- (self as road).traffic_density[myself.mobility_mode][myself.heading_index] + 1;
+					traffic_density[myself.mobility_mode][myself.heading_index]  <- traffic_density[myself.mobility_mode][myself.heading_index] + 1;
 				}
 			}
 		}
