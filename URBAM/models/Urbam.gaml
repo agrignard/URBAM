@@ -29,6 +29,7 @@ global {
 	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
 	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" ;
+	int population_level <- 10 parameter: 'Population level' min: 1 max: 100 category: "General";
 	
 	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/citymatrix_volpe";
 	float computed_line_width;
