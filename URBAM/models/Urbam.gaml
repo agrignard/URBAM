@@ -52,7 +52,7 @@ global {
 	map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::50];
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n write only the modes that have to be drawn
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
-	map<string,geometry> shape_per_mode <- ["car"::circle(global_shape_size*0.25), "bike"::triangle(global_shape_size/2), "walk"::circle(global_shape_size/4), "pev"::triangle(global_shape_size/2)];
+	map<string,geometry> shape_per_mode <- ["car"::circle(global_shape_size*0.25), "bike"::circle(global_shape_size*0.15), "walk"::circle(global_shape_size*0.075), "pev"::circle(global_shape_size/2)];
 	
 	map<string,point> offsets <- ["car"::{0,0}, "bike"::{0,0}, "walk"::{0,0}];
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
@@ -595,7 +595,7 @@ species people skills: [moving]{
 		   match "mode" {	
 				if (target != nil or dest = nil) {
 					if(mobility_mode ="car"){
-					  draw copy(shape_per_mode[mobility_mode])  empty:true border:color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;
+					  draw copy(shape_per_mode[mobility_mode])  color: color_per_mode[mobility_mode] border:color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;
 					}else{
 					  draw copy(shape_per_mode[mobility_mode])  color: color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;	
 					}
