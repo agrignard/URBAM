@@ -10,7 +10,7 @@ model Urbam
 
 global {
 	//PARAMETERS
-	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"hide" among:["default", "default (car)", "hide","road type","edge color","split (3)", "split (5)"];	
+	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"hide" among:["default", "default (car)", "hide","road type","edge color","split (3)", "split (5)"];
 	float building_scale parameter: 'Building scale:' category: 'Road Aspect' <- 0.65 min: 0.2 max: 1.0; 
 	bool show_cells parameter: 'Show cells:' category: 'Road Aspect' <- true;
 	float spacing parameter: 'Spacing ' category: 'Road Aspect' <- 0.65 min:0.0 max: 1.5;
@@ -115,6 +115,7 @@ global {
 		block_size <- min([first(cell).shape.width,first(cell).shape.height]);
 	}
 	
+	
 	action load_profiles {
 		create profile from: csv_file(profile_file,";", true) with: [proportionS::float(get("proportionS")),proportionM::float(get("proportionM")),proportionL::float(get("proportionL")),
 			name::string(get("typo")), max_dist_walk::float(get("max_dist_walk")),max_dist_bike::float(get("max_dist_bike")),max_dist_pev::float(get("max_dist_pev"))
@@ -201,11 +202,6 @@ global {
 	
 	reflex precalculate_display_variables{
 		road_width <- block_size * 2/3 * (1-building_scale);
-//		if road_aspect =  "split (5)" {
-//			computed_line_width <- line_width * block_size/80;
-//		}else{
-//			computed_line_width <- line_width * block_size/40;
-//		}
 		switch road_aspect {
 			match  "split (3)" {
 				computed_line_width <- line_width * road_width/6;
