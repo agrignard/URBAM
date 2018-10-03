@@ -674,20 +674,20 @@ grid button width:3 height:4
 	rgb bord_col<-#black;
 	aspect normal {
 		if (action_nb > 2 and not (action_nb in [11])) {draw rectangle(shape.width * 0.8,shape.height * 0.8).contour + (shape.height * 0.01) color: bord_col;}
-		if (action_nb = 0) {draw "Build residential building"  color:#black font:font("SansSerif", 16, #bold) at: location - {15,-10.0,0};}
-		else if (action_nb = 1) {draw "Build office building"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
+		if (action_nb = 0) {draw "Residential"  color:#black font:font("SansSerif", 16, #bold) at: location - {15,-10.0,0};}
+		else if (action_nb = 1) {draw "Office"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
 		else if (action_nb = 2) {draw "Tools"  color:#black font:font("SansSerif", 16, #bold) at: location - {12,-10.0,0};}
 		else {
-			draw image_file(images[action_nb - 3]) size:{shape.width * 0.7,shape.height * 0.7} ;
+			draw image_file(images[action_nb - 3]) size:{shape.width * 0.5,shape.height * 0.5} ;
 		}
 	}
 }
 
 experiment city type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
-	//layout value: horizontal([0::7131,1::2869]) tabs:true;
+	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
-		display map synchronized:true{
+		display map synchronized:true background:#white{
 			species cell  refresh: on_modification_cells;// lines: #white;
 			species road ;
 			species people;
@@ -704,13 +704,13 @@ experiment city type: gui autorun: true{
 			event["8"] action: {people_aspect<-"hide";};   
 		}
 		
-		display mapTable synchronized:true fullscreen:1{
+		/*display mapTable synchronized:true fullscreen:1{
 			species cell  refresh: on_modification_cells;// lines: #white;
 			species road ;
 			species people;
 			species building refresh: on_modification_bds;
 			event mouse_down action:infrastructure_management;  
-		}
+		}*/
 		
 	    //Bouton d'action
 		display action_buton name:"Actions possibles" ambient_light:100 	{
