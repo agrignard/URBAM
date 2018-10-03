@@ -20,7 +20,6 @@ global {
 	
 	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)","hide"];
 	int global_shape_size parameter: 'People Size:' category: 'People Aspect' <-50 min:10 max:100;
-	float people_proportion parameter: 'People Ratio:' category: 'People Aspect' <-1.0 min:0.0 max:1.0;
 	
 	
 	bool load_grid_file_from_cityIO parameter: 'Online Grid:' category: 'Simulation' <- false;
@@ -29,7 +28,7 @@ global {
 	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
 	float weight_pev <- 0.0 step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" ;
-	int population_level <- 10 parameter: 'Population level' min: 1 max: 100 category: "General";
+	int population_level <- 100 parameter: 'Population level' min: 0 max: 300 category: "General";
 	
 	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/citymatrix_volpe";
 	float computed_line_width;
@@ -380,6 +379,27 @@ species building {
 		bounds <- the_cell.shape + 0.5 - shape;
 			
 	}
+	
+	reflex populate when: (type = "residential"){
+		int pop <- int(population_level/100 * nb_people_per_size[size]);
+//		write "Pop:"+length(inhabitants)+"/"+pop;
+		if length(inhabitants) < pop{
+			create people number: 1 with: [location::any_location_in(bounds)] {
+				origin <- myself;
+				origin.inhabitants << self;
+				
+				do reinit_destination;
+				map<profile, float> prof_pro <- proportions_per_bd_type[origin.size];
+				my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
+			}
+		}
+		if length(inhabitants) > pop{
+			people tmp <- one_of(inhabitants);
+			inhabitants >- tmp;
+			ask tmp {do die;}
+		}
+	}
+	
 	action remove {
 		if (type = "office") {
 			offices[] >- self;
@@ -648,14 +668,14 @@ grid cell width: 16 height: 16{
 			create building returns: bds{
 				do initialize(myself, "residential", the_size);
 			}
-			create people number: people_proportion*nb_people_per_size[first(bds).size] with: [location::any_location_in(first(bds).bounds)] {
-				origin <- first(bds);
-				origin.inhabitants << self;
-				
-				do reinit_destination;
-				map<profile, float> prof_pro <- proportions_per_bd_type[origin.size];
-				my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
-			}
+//			create people number: nb_people_per_size[first(bds).size] with: [location::any_location_in(first(bds).bounds)] {
+//				origin <- first(bds);
+//				origin.inhabitants << self;
+//				
+//				do reinit_destination;
+//				map<profile, float> prof_pro <- proportions_per_bd_type[origin.size];
+//				my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
+//			}
 
 		}
 		
