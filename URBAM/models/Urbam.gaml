@@ -83,7 +83,8 @@ global {
 	bool traffic_jam <- true parameter: true;
 	
 	//geometry shape <- envelope(nyc_bounds0_shape_file);
-	geometry shape<-square(5000);
+	// geometry shape<-square(5000); // one edge is 5000(m)
+	geometry shape<-rectangle(8000, 5000);
 	float step <- sqrt(shape.area) /2000.0 ;
 	
 	map<string,list<float>> speed_per_mobility <- ["car"::[20.0,40.0], "bike"::[5.0,15.0], "walk"::[3.0,7.0], "pev"::[15.0,30.0]];
@@ -521,6 +522,7 @@ species profile {
 	float max_dist_pev;
 }
 species people skills: [moving]{
+
 	int heading_index <- 0;
 	string mobility_mode <- "walk"; 
 	float display_size <-sqrt(world.shape.area)* 0.01;
@@ -653,7 +655,7 @@ species people skills: [moving]{
 		
 	}
 }
-grid cell width: 16 height: 16{
+grid cell width: 16 height: 10 { // height: 16{
 	building my_building;
 	//rgb color <- #white;
 	action new_residential(string the_size) {
@@ -718,11 +720,13 @@ experiment city type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
-		display map synchronized:true background:#white{
+		display map synchronized:true background:#white toolbar:false{ // type:opengl{
+			// things to display
 			species cell  refresh: on_modification_cells;// lines: #white;
 			species road ;
 			species people;
 			species building refresh: on_modification_bds;
+			
 			event mouse_down action:infrastructure_management;
 			event["0"] action: {road_aspect<-"hide";};
 			event["1"] action: {road_aspect<-"default";};
