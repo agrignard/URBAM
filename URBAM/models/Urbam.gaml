@@ -176,7 +176,7 @@ global {
 		do load_cityIO_matrix("https://cityio.media.mit.edu/api/table/citymatrix_volpe");
 	}
 	
-	reflex test_load_file when: load_grid_file and every(100#cycle){
+	reflex test_load_file when: load_grid_file and cycle=0{
 		do load_matrix("../includes/CH_grid.csv");
 		//do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
 		//file_cpt <- file_cpt+ 1;
@@ -698,7 +698,7 @@ grid cell width: 16 height: 10 { // height: 16{
 	}
 	
 	aspect default{
-		if show_cells {draw shape scaled_by (building_scale+(1-building_scale)/3) color: #lightgrey ;}
+		if show_cells {draw shape scaled_by (building_scale+(1-building_scale)/3) color: #darkgrey ;}
 	}
 
 }
@@ -728,27 +728,18 @@ experiment city type: gui autorun: true{
 			species road ;
 			species people;
 			species building refresh: on_modification_bds;
-			
 			event mouse_down action:infrastructure_management;
 			event["0"] action: {road_aspect<-"hide";};
-			event["1"] action: {road_aspect<-"default";};
-			event["2"] action: {road_aspect<-"edge color";};
-			event["3"] action: {road_aspect<-"road type";};
-			event["4"] action: {road_aspect<-"split (5)";};
-			event["5"] action: {people_aspect<-"default";};
-			event["6"] action: {people_aspect<-"profile";};
-			event["7"] action: {people_aspect<-"dynamic_abstract";};
-			event["8"] action: {people_aspect<-"hide";};   
+			event["1"] action: {action_type<-9;};
+			event["2"] action: {action_type<-3;};
+			event["3"] action: {action_type<-6;};
+			event["4"] action: {action_type<-4;};
+			event["5"] action: {action_type<-7;};
+			event["6"] action: {action_type<-10;};
+			event["7"] action: {action_type<-5;};
+			event["8"] action: {action_type<-8;};   
 		}
-		
-		/*display mapTable synchronized:true fullscreen:1{
-			species cell  refresh: on_modification_cells;// lines: #white;
-			species road ;
-			species people;
-			species building refresh: on_modification_bds;
-			event mouse_down action:infrastructure_management;  
-		}*/
-		
+				
 	    //Bouton d'action
 		display action_buton name:"Actions possibles" ambient_light:100 	{
 			species button aspect:normal ;
