@@ -318,7 +318,7 @@ global {
 		matrix data <- matrix(my_csv_file);
 		loop i from: 0 to: data.rows - 1 {
 			loop j from: 0 to: data.columns - 1 {
-				if (data[j, i] != -1) {
+//				if (data[j, i] != -1) {
 					int id <- int(data[j, i]);
 					if (id > 0) {
                      do createCell(id, j, i);
@@ -328,7 +328,7 @@ global {
 					if (id<=0){					
 						ask current_cell{ do erase_building;}
 					}
-				}
+//				}
 			}
 		}
 	}
