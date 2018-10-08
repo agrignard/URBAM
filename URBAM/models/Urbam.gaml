@@ -23,7 +23,7 @@ global {
 	
 	
 	bool load_grid_file_from_cityIO parameter: 'Online Grid:' category: 'Simulation' <- false;
-	bool load_grid_file <-false; 
+	bool load_grid_file <-true; 
 	
 	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
@@ -283,7 +283,7 @@ global {
 	
 	action build_buildings {
 		cell selected_cell <- first(cell overlapping (circle(sqrt(shape.area)/100.0) at_location #user_location));
-		if (selected_cell != nil) {
+		if (selected_cell != nil) and (selected_cell.is_active) {
 			if (action_type = 3) {ask selected_cell {do new_residential("S");}} 
 			if (action_type = 4) {ask selected_cell {do new_office("S");}} 
 			if (action_type = 5) {ask selected_cell {do erase_building;}} 
@@ -323,8 +323,9 @@ global {
 					if (id > 0) {
                      do createCell(id, j, i);
 					}
-					if (id=0){
-						cell current_cell <- cell[j,i];
+					cell current_cell <- cell[j,i];
+					current_cell.is_active <- id<0?false:true;
+					if (id<=0){					
 						ask current_cell{ do erase_building;}
 					}
 				}
@@ -657,6 +658,7 @@ species people skills: [moving]{
 }
 grid cell width: 16 height: 10 { // height: 16{
 	building my_building;
+	bool is_active <- true;
 	//rgb color <- #white;
 	action new_residential(string the_size) {
 		if (my_building != nil and (my_building.type = "residential") and (my_building.size = the_size)) {
