@@ -23,7 +23,7 @@ global {
 	
 	
 	bool load_grid_file_from_cityIO parameter: 'Online Grid:' category: 'Simulation' <- false;
-	bool load_grid_file parameter: 'Offline Grid:' category: 'Simulation' <- false; 
+	bool load_grid_file <-true; 
 	
 	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
@@ -42,10 +42,16 @@ global {
 	bool on_modification_bds <- false update: false;
 	
 	
+	//kml kml_export;
+	bool expert_to_kml <- false;
+	int nb_cycles_between_save <- 50;
+	int cycle_to_export <- 500;
+	
+	
 	map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::50];
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n write only the modes that have to be drawn
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
-	map<string,geometry> shape_per_mode <- ["car"::circle(global_shape_size*0.25), "bike"::circle(global_shape_size*0.2), "walk"::circle(global_shape_size*0.15), "pev"::circle(global_shape_size*0.2)];
+	map<string,geometry> shape_per_mode <- ["car"::circle(global_shape_size*0.25), "bike"::circle(global_shape_size*0.15), "walk"::circle(global_shape_size*0.075), "pev"::circle(global_shape_size/2)];
 	
 	map<string,point> offsets <- ["car"::{0,0}, "bike"::{0,0}, "walk"::{0,0}];
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
@@ -72,14 +78,13 @@ global {
 	int file_cpt <- 1;
 
 	map<string,graph> graph_per_mode;
-	graph<geometry, geometry> metagraph;
 	
 	float road_capacity <- 10.0;
 	bool traffic_jam <- true parameter: true;
 	
 	//geometry shape <- envelope(nyc_bounds0_shape_file);
-	geometry shape<-square(5000); // one edge is 5000(m)
-	//geometry shape<-rectangle(8000, 5000);
+	// geometry shape<-square(5000); // one edge is 5000(m)
+	geometry shape<-rectangle(8000, 5000);
 	float step <- sqrt(shape.area) /2000.0 ;
 	
 	map<string,list<float>> speed_per_mobility <- ["car"::[20.0,40.0], "bike"::[5.0,15.0], "walk"::[3.0,7.0], "pev"::[15.0,30.0]];
@@ -109,14 +114,8 @@ global {
 		do init_buttons; 
 		do load_profiles;
 		block_size <- min([first(cell).shape.width,first(cell).shape.height]);
-		
 	}
 	
-	action initMetaGraph{
-		//metagraph <- as_intersection_graph(cell where !each.is_active, 10);
-		list<point> cellList <- cell where !each.is_active collect each.location;
-		metagraph<-as_distance_graph(cellList, int(first(cell).shape.width));
-	}
 	
 	action load_profiles {
 		create profile from: csv_file(profile_file,";", true) with: [proportionS::float(get("proportionS")),proportionM::float(get("proportionM")),proportionL::float(get("proportionL")),
@@ -177,9 +176,8 @@ global {
 		do load_cityIO_matrix("https://cityio.media.mit.edu/api/table/citymatrix_volpe");
 	}
 	
-	reflex test_load_file when: load_grid_file and cycle=0{
+	reflex test_load_file when: load_grid_file and every(100#cycle){
 		do load_matrix("../includes/CH_grid.csv");
-		do initMetaGraph;
 		//do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
 		//file_cpt <- file_cpt+ 1;
 	}
@@ -222,7 +220,25 @@ global {
 			if road_aspect = "split (5)" {offsets[t] <- {0.5*road_width*spacing*(mode_order[t]+0.5)/(length(mode_order)-0.5),0.5*road_width*spacing*(mode_order[t]+0.5)/(length(mode_order)-0.5)};}
 		}		
 	}
+	
+	/*reflex export_to_kml when: expert_to_kml and every(nb_cycles_between_save) and cycle <= cycle_to_export{
+		date init_date <- current_date minus_seconds (step*nb_cycles_between_save);
+		ask road {
+			if nb_people > 0  {
+				rgb col <- rgb(255,255 * (1-nb_people/road_capacity), 255 * (1-nb_people/road_capacity));
+				kml_export <- kml_export add_geometry (shape,nb_people*2.0,col, col, init_date ,current_date);	
+			}	
+		}
+		ask building {
+			kml_export <- kml_export add_geometry (shape,2.0,#black, rgb(color_per_type[type], size = "S" ? 50 : (size = "M" ? 100: 255)  ),init_date ,current_date);
+		}
+		if (cycle = cycle_to_export) {
+			save kml_export to:"result.kmz" type:"kmz";
 		
+		}
+	}*/
+	
+	
 	action infrastructure_management {
 		if (action_type = 8) {
 			do manage_road;
@@ -640,7 +656,7 @@ species people skills: [moving]{
 		
 	}
 }
-grid cell width: 16 height: 16 { // height: 16{
+grid cell width: 16 height: 10 { // height: 16{
 	building my_building;
 	bool is_active <- true;
 	//rgb color <- #white;
@@ -712,25 +728,27 @@ experiment city type: gui autorun: true{
 			species road ;
 			species people;
 			species building refresh: on_modification_bds;
+			
 			event mouse_down action:infrastructure_management;
 			event["0"] action: {road_aspect<-"hide";};
-			event["1"] action: {action_type<-9;};
-			event["2"] action: {action_type<-3;};
-			event["3"] action: {action_type<-6;};
-			event["4"] action: {action_type<-4;};
-			event["5"] action: {action_type<-7;};
-			event["6"] action: {action_type<-10;};
-			event["7"] action: {action_type<-5;};
-			event["8"] action: {action_type<-8;}; 
-			
-			
-			graphics "the graph" {
-				loop edge over: metagraph.edges {
-					draw edge color: #blue;
-				}
-			}  
+			event["1"] action: {road_aspect<-"default";};
+			event["2"] action: {road_aspect<-"edge color";};
+			event["3"] action: {road_aspect<-"road type";};
+			event["4"] action: {road_aspect<-"split (5)";};
+			event["5"] action: {people_aspect<-"default";};
+			event["6"] action: {people_aspect<-"profile";};
+			event["7"] action: {people_aspect<-"dynamic_abstract";};
+			event["8"] action: {people_aspect<-"hide";};   
 		}
-				
+		
+		/*display mapTable synchronized:true fullscreen:1{
+			species cell  refresh: on_modification_cells;// lines: #white;
+			species road ;
+			species people;
+			species building refresh: on_modification_bds;
+			event mouse_down action:infrastructure_management;  
+		}*/
+		
 	    //Bouton d'action
 		display action_buton name:"Actions possibles" ambient_light:100 	{
 			species button aspect:normal ;
