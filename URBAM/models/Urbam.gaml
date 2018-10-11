@@ -31,6 +31,7 @@ global {
 	int population_level <- 100 parameter: 'Population level' min: 0 max: 300 category: "General";
 	
 	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/citymatrix_volpe";
+	
 	float computed_line_width;
 	float road_width;
 	float block_size;
@@ -174,7 +175,7 @@ global {
 	}
 	
 	reflex test_load_file_from_cityIO when: load_grid_file_from_cityIO and every(10#cycle) {
-		do load_cityIO_matrix("https://cityio.media.mit.edu/api/table/citymatrix_volpe");
+		do load_cityIO_matrix(cityIOUrl);
 	}
 	
 	reflex test_load_file when: load_grid_file and cycle=0{
@@ -317,11 +318,11 @@ global {
 		}
 	}
 	
-	action load_cityIO_matrix(string cityIOUrl) {
+	action load_cityIO_matrix(string cityIOUrl_) {
 		map<string, unknown> cityMatrixData;
 	    list<map<string, int>> cityMatrixCell;	
 		try {
-			cityMatrixData <- json_file(cityIOUrl).contents;
+			cityMatrixData <- json_file(cityIOUrl_).contents;
 		} catch {
 			cityMatrixData <- json_file("../includes/cityIO_Kendall.json").contents;
 			write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_Kendall.json";
