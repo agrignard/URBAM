@@ -18,8 +18,8 @@ global {
 	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
 	
 	//SPATIAL PARAMETERS  
-	int grid_height <- 6;
-	int grid_width <- 6;
+	int grid_height <- 8;
+	int grid_width <- 8;
 	float environment_height <- 5000.0;
 	float environment_width <- 5000.0;
 
@@ -654,7 +654,7 @@ species people skills: [moving]{
 	}
 }
 
-grid cell width: 8 height: 8 { // height: 16{
+grid cell width: grid_width height: grid_height { // height: 16{
 	building my_building;
 	bool is_active <- true;
 	//rgb color <- #white;
