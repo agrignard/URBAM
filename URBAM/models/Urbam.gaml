@@ -17,6 +17,10 @@ global {
 	float line_width parameter: 'Line width' category: 'Road Aspect' <- 0.5 min:0.0 max: 2.0;
 	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
 	
+	int grid_height <- 6;
+	int grid_width <- 6;
+	float environment_height <- 5000.0;
+	float environment_width <- 5000.0;
 	
 	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)","hide"];
 	int global_shape_size parameter: 'People Size:' category: 'People Aspect' <-50 min:10 max:100;
@@ -79,7 +83,7 @@ global {
 	bool traffic_jam <- true parameter: true;
 	
 	//geometry shape <- envelope(nyc_bounds0_shape_file);
-	geometry shape<-square(5000); // one edge is 5000(m)
+	geometry shape<-rectangle(environment_width, environment_height); // one edge is 5000(m)
 	//geometry shape<-rectangle(8000, 5000);
 	float step <- sqrt(shape.area) /2000.0 ;
 	
@@ -99,11 +103,15 @@ global {
 	]; 
 	init {
 		list<geometry> lines;
-		ask cell {
-			lines << shape.contour;
+		float cell_w <- first(cell).shape.width;
+		float cell_h <- first(cell).shape.height;
+		loop i from: 0 to: grid_width {
+			lines << line([{i*cell_w,0}, {i*cell_w,environment_height}]);
 		}
-		geometry global_line <- union(lines);
-		create road from: split_lines(global_line) {
+		loop i from: 0 to: grid_height {
+			lines << line([{0, i*cell_h}, {environment_width,i*cell_h}]);
+		}
+		create road from: split_lines(lines) {
 			create road with: [shape:: line(reverse(shape.points))];
 		}
 		do update_graphs;
@@ -641,7 +649,7 @@ species people skills: [moving]{
 		
 	}
 }
-grid cell width: 16 height: 16 { // height: 16{
+grid cell width: 6 height: 6 { // height: 16{
 	building my_building;
 	bool is_active <- true;
 	//rgb color <- #white;
