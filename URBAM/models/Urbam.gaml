@@ -18,8 +18,8 @@ global {
 	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
 	
 	//SPATIAL PARAMETERS  
-	int grid_height <- 8;
-	int grid_width <- 8;
+	int grid_height <- 6;
+	int grid_width <- 6;
 	float environment_height <- 5000.0;
 	float environment_width <- 5000.0;
 
@@ -126,7 +126,6 @@ global {
 	}
 	
 	action initMetaGraph{
-		//metagraph <- as_intersection_graph(cell where !each.is_active, 10);
 		list<point> cellList <- cell where !each.is_active collect each.location;
 		metagraph<-as_distance_graph(cellList, int(first(cell).shape.width));
 	}
@@ -190,11 +189,10 @@ global {
 		do load_cityIO_matrix(cityIOUrl);
 	}
 	
-	reflex test_load_file when: load_grid_file and cycle=0{
-		do load_matrix("../includes/CH_grid.csv");
-		do initMetaGraph;
-		//do load_matrix("../includes/nyc_grid_" +file_cpt+".csv");
-		//file_cpt <- file_cpt+ 1;
+	reflex test_load_file when: load_grid_file and every(100#cycle){
+		write "load" + file_cpt;
+		do load_matrix("../includes/6x6_" +file_cpt+".csv");
+		file_cpt <- (file_cpt+ 1) mod 5;
 	}
 	
 	
@@ -315,7 +313,6 @@ global {
 		matrix data <- matrix(my_csv_file);
 		loop i from: 0 to: data.rows - 1 {
 			loop j from: 0 to: data.columns - 1 {
-//				if (data[j, i] != -1) {
 					int id <- int(data[j, i]);
 					if (id > 0) {
                      do createCell(id, j, i);
@@ -325,7 +322,6 @@ global {
 					if (id<=0){					
 						ask current_cell{ do erase_building;}
 					}
-//				}
 			}
 		}
 	}
@@ -377,7 +373,6 @@ species building {
 	
 	reflex populate when: (type = "residential"){
 		int pop <- int(population_level/100 * nb_people_per_size[size]);
-//		write "Pop:"+length(inhabitants)+"/"+pop;
 		if length(inhabitants) < pop{
 			create people number: 1 with: [location::any_location_in(bounds)] {
 				origin <- myself;
@@ -635,15 +630,10 @@ species people skills: [moving]{
 					  draw copy(shape_per_mode[mobility_mode])  color: color_per_profile[my_profile.name] rotate:heading +90 at: location+offset;	
 					}
 				}
-				//if (target != nil or dest = nil) {draw copy(shape_per_mode[mobility_mode]) color: color_per_profile[my_profile.name] rotate:heading +90 at: location+offset;}
 			}
 			match "dynamic_abstract"{		
 				float scale <- min([1,road(current_edge).total_traffic() / 100])^2;
 				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)] at: location+offset;}
-			//		if current_path != nil{
-			//			draw (line(origin_point,first(first(current_path.segments).points)) - origin.shape -dest.shape) color: rgb(52,152,219);
-			//			if target != nil {draw (line(last(last(current_path.segments).points),target) - origin.shape - dest.shape) color: rgb(52,152,219);}
-			//		}
 			}		
 			match "dynamic_abstract (car)"{		
 				float scale <- min([1,road(current_edge).total_traffic_per_mode('car') / 100])^2;
@@ -666,15 +656,6 @@ grid cell width: grid_width height: grid_height { // height: 16{
 			create building returns: bds{
 				do initialize(myself, "residential", the_size);
 			}
-//			create people number: nb_people_per_size[first(bds).size] with: [location::any_location_in(first(bds).bounds)] {
-//				origin <- first(bds);
-//				origin.inhabitants << self;
-//				
-//				do reinit_destination;
-//				map<profile, float> prof_pro <- proportions_per_bd_type[origin.size];
-//				my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
-//			}
-
 		}
 		
 	}
@@ -720,7 +701,8 @@ experiment cityScience type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
-		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl{	// things to display
+		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl
+		camera_pos: {2488.3849,2453.4667,14525.3672} camera_look_pos: {2488.3849,2453.2131,0.0095} camera_up_vector: {0.0,1.0,0.0}{	// things to display
 			species cell aspect:default;// refresh: on_modification_cells;
 			species road ;
 			species people;
