@@ -14,13 +14,17 @@ global {
 	float building_scale parameter: 'Building scale:' category: 'Road Aspect' <- 0.65 min: 0.2 max: 1.0; 
 	bool show_cells parameter: 'Show cells:' category: 'Road Aspect' <- true;
 	float spacing parameter: 'Spacing ' category: 'Road Aspect' <- 0.65 min:0.0 max: 1.5;
-	float line_width parameter: 'Line width' category: 'Road Aspect' <- 0.5 min:0.0 max: 2.0;
+	float line_width parameter: 'Line width' category: 'Road Aspect' <- 0.5 min:0.0 max: 3.0;
 	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
 	
+	//SPATIAL PARAMETERS  
 	int grid_height <- 6;
 	int grid_width <- 6;
 	float environment_height <- 5000.0;
 	float environment_width <- 5000.0;
+
+	bool blackMirror parameter: 'Dark Room' category: 'Aspect' <- false;
+	
 	
 	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)","hide"];
 	int global_shape_size parameter: 'People Size:' category: 'People Aspect' <-50 min:10 max:100;
@@ -50,7 +54,7 @@ global {
 	map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::50];
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n write only the modes that have to be drawn
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
-	map<string,geometry> shape_per_mode <- ["car"::circle(global_shape_size*0.25), "bike"::circle(global_shape_size*0.2), "walk"::circle(global_shape_size*0.15), "pev"::circle(global_shape_size*0.2)];
+	map<string,geometry> shape_per_mode <- ["car"::circle(global_shape_size*0.225), "bike"::circle(global_shape_size*0.2), "walk"::circle(global_shape_size*0.15), "pev"::circle(global_shape_size*0.2)];
 	
 	map<string,point> offsets <- ["car"::{0,0}, "bike"::{0,0}, "walk"::{0,0}];
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
@@ -649,7 +653,8 @@ species people skills: [moving]{
 		
 	}
 }
-grid cell width: 6 height: 6 { // height: 16{
+
+grid cell width: 8 height: 8 { // height: 16{
 	building my_building;
 	bool is_active <- true;
 	//rgb color <- #white;
@@ -691,7 +696,7 @@ grid cell width: 6 height: 6 { // height: 16{
 	}
 	
 	aspect default{
-		if show_cells {draw shape scaled_by (building_scale+(1-building_scale)/3) color: #lightgrey ;}
+		if show_cells {draw shape scaled_by (building_scale+(1-building_scale)/3) color: #silver ;}
 	}
 
 }
@@ -711,18 +716,17 @@ grid button width:3 height:4
 	}
 }
 
-experiment city type: gui autorun: true{
+experiment cityScience type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
-		display map synchronized:true background:#white toolbar:false{ // type:opengl{
-			// things to display
-			species cell  refresh: on_modification_cells;// lines: #white;
+		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl{	// things to display
+			species cell aspect:default;// refresh: on_modification_cells;
 			species road ;
 			species people;
-			species building refresh: on_modification_bds;
+			species building;// refresh: on_modification_bds;
 			event mouse_down action:infrastructure_management;
-			event["0"] action: {road_aspect<-"hide";};
+			
 			event["1"] action: {action_type<-9;};
 			event["2"] action: {action_type<-3;};
 			event["3"] action: {action_type<-6;};
@@ -732,6 +736,18 @@ experiment city type: gui autorun: true{
 			event["7"] action: {action_type<-5;};
 			event["8"] action: {action_type<-8;}; 
 			
+			event["h"] action: {road_aspect<-"hide";};
+			event["r"] action: {road_aspect<-"default";};
+			event["s"] action: {road_aspect<-"split (5)";};
+			event["c"] action: {road_aspect<-"edge color";}; 
+			
+			event["n"] action: {people_aspect<-"hide";};
+			event["m"] action: {people_aspect<-"mode";};
+			event["p"] action: {people_aspect<-"profile";};
+			event["a"] action: {people_aspect<-"dynamic_abstract";};
+			
+			event["b"] action: {blackMirror<-!blackMirror;}; 
+			event["g"] action: {show_cells<-!show_cells;}; 
 			
 			graphics "the graph" {
 				loop edge over: metagraph.edges {
