@@ -32,6 +32,7 @@ global {
 	
 	bool load_grid_file_from_cityIO parameter: 'Online Grid:' category: 'Simulation' <- false;
 	bool load_grid_file parameter: 'Offline Grid:' category: 'Simulation' <- false; 
+	bool load_grid_file_from_processing parameter: 'Offline Grid Processing:' category: 'Simulation' <- false; 
 	
 	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
@@ -195,6 +196,10 @@ global {
 		file_cpt <- (file_cpt+ 1) mod 5;
 	}
 	
+	reflex test_load_file_from_processing when: load_grid_file_from_processing and every(100#cycle){
+		do load_matrix_from_processing("../includes/grid.json");
+	}
+	
 	
 	reflex update_graph when: every(3 #cycle) {
 		map<road,float> weights <- traffic_jam ? road as_map (each::(each.shape.perimeter)) : road as_map (each::(each.shape.perimeter * (min([10,1/exp(-each.nb_people/road_capacity)]))));
@@ -347,6 +352,34 @@ global {
 		  }     
         }	
 	}	
+	
+	action load_matrix_from_processing(string cityIOUrl_){
+		map<string, unknown> cityMatrixData;
+		list<map<string, int>> cityMatrixCell;
+		cityMatrixData <- json_file("../includes/grid.json").contents;
+		int nrows <- int(int(cityMatrixData["header"]["spatial"]["nrows"])/2);
+		int ncols <- int(int(cityMatrixData["header"]["spatial"]["ncols"])/2);
+		cityMatrixCell <- cityMatrixData["header"]["grid"];
+		int x;
+		int y;
+		int id;
+		loop i from:0 to: (length(cityMatrixCell)-1){ 
+		 if((i mod nrows) mod 2 = 0 and int(i/ncols) mod 2 = 0){
+		 	
+		 	//write "i:" + i + " x:" + (i mod nrows)/2 + " y:" + (int(i/ncols))/2 +  " id:" + int(cityMatrixCell[i]["type"]);    
+		    x<- int((i mod nrows)/2);
+		    y<-int((int(i/ncols))/2);
+		    id<-int(cityMatrixCell[i]["type"]);
+		    if(id!=-2 and id !=-1 and id!=6 ){
+      	  	do createCell(id+1, x, y);	
+      	  } 
+      	  if (id=-1){
+		    cell current_cell <- cell[x,y];
+			ask current_cell{ do erase_building;}
+		  }    
+		 } 		
+        }	
+	}
 }
 
 
@@ -702,7 +735,7 @@ experiment cityScience type: gui autorun: true{
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
 		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl
-		camera_pos: {2488.3849,2453.4667,14525.3672} camera_look_pos: {2488.3849,2453.2131,0.0095} camera_up_vector: {0.0,1.0,0.0}{	// things to display
+		camera_pos: {2333.0318,1663.7148,12206.7968} camera_look_pos: {2333.0318,1663.5017,0.0233} camera_up_vector: {0.0,1.0,0.0}{
 			species cell aspect:default;// refresh: on_modification_cells;
 			species road ;
 			species people;
