@@ -12,7 +12,8 @@ global {
 	//PARAMETERS
 	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"hide" among:["default", "default (car)", "hide","road type","edge color","split (3)", "split (5)"];
 	float building_scale parameter: 'Building scale:' category: 'Road Aspect' <- 0.65 min: 0.2 max: 1.0; 
-	bool show_cells parameter: 'Show cells:' category: 'Road Aspect' <- true;
+	bool show_cells parameter: 'Show cells:' category: 'Grid Aspect' <- false;
+	bool show_building parameter: 'Show Building:' category: 'Grid Aspect' <- false;
 	float spacing parameter: 'Spacing ' category: 'Road Aspect' <- 0.65 min:0.0 max: 1.5;
 	float line_width parameter: 'Line width' category: 'Road Aspect' <- 0.5 min:0.0 max: 3.0;
 	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
@@ -23,7 +24,7 @@ global {
 	float environment_height <- 5000.0;
 	float environment_width <- 5000.0;
 
-	bool blackMirror parameter: 'Dark Room' category: 'Aspect' <- false;
+	bool blackMirror parameter: 'Dark Room' category: 'Aspect' <- true;
 	
 	
 	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)","hide"];
@@ -32,7 +33,7 @@ global {
 	
 	bool load_grid_file_from_cityIO parameter: 'Online Grid:' category: 'Simulation' <- false;
 	bool load_grid_file parameter: 'Offline Grid:' category: 'Simulation' <- false; 
-	bool load_grid_file_from_processing parameter: 'Offline Grid Processing:' category: 'Simulation' <- false; 
+	bool load_grid_file_from_processing parameter: 'Offline Grid Processing:' category: 'Simulation' <- true; 
 	
 	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.8 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
@@ -364,8 +365,7 @@ global {
 		int y;
 		int id;
 		loop i from:0 to: (length(cityMatrixCell)-1){ 
-		 if((i mod nrows) mod 2 = 0 and int(i/ncols) mod 2 = 0){
-		 	
+		 if((i mod nrows) mod 2 = 1 and int(i/ncols) mod 2 = 0){
 		 	//write "i:" + i + " x:" + (i mod nrows)/2 + " y:" + (int(i/ncols))/2 +  " id:" + int(cityMatrixCell[i]["type"]);    
 		    x<- int((i mod nrows)/2);
 		    y<-int((int(i/ncols))/2);
@@ -441,7 +441,8 @@ species building {
 		color <- rgb(color_per_type[type], size = "S" ? 50 : (size = "M" ? 100: 255)  );
 	}
 	aspect default {
-		draw shape scaled_by building_scale color: color;
+		if show_building {draw shape scaled_by building_scale color: color;}
+		//if show_building {draw shape scaled_by 0.5 color: rgb(100,100,100);}
 	}
 }
 
@@ -710,7 +711,8 @@ grid cell width: grid_width height: grid_height { // height: 16{
 	}
 	
 	aspect default{
-		if show_cells {draw shape scaled_by (building_scale+(1-building_scale)/3) color: #silver ;}
+		//if show_cells {draw shape scaled_by (building_scale+(1-building_scale)/3) color: rgb(100,100,100) ;}
+		if show_cells {draw shape scaled_by (0.5) color: rgb(100,100,100) ;}
 	}
 
 }
@@ -734,8 +736,10 @@ experiment cityScience type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
-		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl
-		camera_pos: {2333.0318,1663.7148,12206.7968} camera_look_pos: {2333.0318,1663.5017,0.0233} camera_up_vector: {0.0,1.0,0.0}{
+		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl fullscreen:1 draw_env:false
+		camera_pos: {2521.3574,2282.8873,11644.0702} camera_look_pos: {2521.3574,2282.684,0.0038} camera_up_vector: {0.0,1.0,0.0}{//keystone: [{0.07812499999999989,0.03125,0.0},{0.020312499999999956,0.98625,0.0},{1.0195312500000007,1.0375,0.0},{0.94140625,0.02750000000000008,0.0}]
+		
+		//camera_pos: {2333.0318,1663.7148,12206.7968} camera_look_pos: {2333.0318,1663.5017,0.0233} camera_up_vector: {0.0,1.0,0.0}{
 			species cell aspect:default;// refresh: on_modification_cells;
 			species road ;
 			species people;
@@ -761,7 +765,9 @@ experiment cityScience type: gui autorun: true{
 			event["p"] action: {people_aspect<-"profile";};
 			event["a"] action: {people_aspect<-"dynamic_abstract";};
 			
-			event["b"] action: {blackMirror<-!blackMirror;}; 
+			event["w"] action: {blackMirror<-!blackMirror;};
+			event["b"] action: {show_building<-!show_building;};
+			 
 			event["g"] action: {show_cells<-!show_cells;}; 
 			
 			graphics "the graph" {
