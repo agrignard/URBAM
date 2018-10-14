@@ -8,7 +8,7 @@
 model Urbam
 
 
-global {
+global{
 	//PARAMETERS
 	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"hide" among:["default", "default (car)", "hide","road type","edge color","split (3)", "split (5)"];
 	float building_scale parameter: 'Building scale:' category: 'Road Aspect' <- 0.65 min: 0.2 max: 1.0; 
@@ -107,6 +107,11 @@ global {
 		file(imageFolder +"office_L.png"),
 		file(imageFolder +"empty.png")
 	]; 
+	
+	// Network
+	int port <- 9877;
+	string url <- "localhost";
+	
 	init {
 		list<geometry> lines;
 		float cell_w <- first(cell).shape.width;
@@ -124,7 +129,9 @@ global {
 		do init_buttons; 
 		do load_profiles;
 		block_size <- min([first(cell).shape.width,first(cell).shape.height]);
-		
+		create NetworkingAgent number: 1 {
+		   do connect to: url protocol: "udp_server" port: port ;
+		}	
 	}
 	
 	action initMetaGraph{
@@ -379,7 +386,7 @@ global {
 		  }    
 		 } 		
         }	
-	}
+	}	
 }
 
 
@@ -729,6 +736,37 @@ grid button width:3 height:4
 		else {
 			draw image_file(images[action_nb - 3]) size:{shape.width * 0.5,shape.height * 0.5} ;
 		}
+	}
+}
+
+species NetworkingAgent skills:[network] {
+	
+	reflex fetch {	
+		if (length(mailbox) > 0) {
+		message s <- last(mailbox);
+		list gridlist <- string(s.contents) split_with(";");
+		int nrows <- 12;
+		int ncols <- 12;
+		int x;
+		int y;
+		int id;
+		loop i from:0 to: (length(gridlist)-2){ 
+		 if((i mod nrows) mod 2 = 0 and int(i/ncols) mod 2 = 0){
+		 	write "from GAMA";
+		 	write "i:" + i + " x:" + (i mod nrows)/2 + " y:" + (int(i/ncols))/2 +  " id:" + int(gridlist[i]);    
+		    x<- int((i mod nrows)/2);
+		    y<-int((int(i/ncols))/2);
+		    id<-int(gridlist[i]);
+		    if(id!=-2 and id !=-1 and id!=6 ){
+      	  	ask world{do createCell(id+1, x, y);}	
+      	    } 
+      	  if (id=-1){
+		    cell current_cell <- cell[x,y];
+			ask current_cell{ do erase_building;}
+		  }   
+		 } 		
+        }	
+	  }
 	}
 }
 
