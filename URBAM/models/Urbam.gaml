@@ -198,7 +198,10 @@ global {
 	}
 	
 	reflex test_load_file_from_processing when: load_grid_file_from_processing and every(100#cycle){
-		do load_matrix_from_processing("../includes/grid.json");
+		write file_cpt;
+		do load_matrix_from_processing("../includes/grid_"+file_cpt+".json");
+		file_cpt <- (file_cpt) mod 5;
+		file_cpt<-file_cpt+1;
 	}
 	
 	
@@ -357,7 +360,7 @@ global {
 	action load_matrix_from_processing(string cityIOUrl_){
 		map<string, unknown> cityMatrixData;
 		list<map<string, int>> cityMatrixCell;
-		cityMatrixData <- json_file("../includes/grid.json").contents;
+		cityMatrixData <- json_file(cityIOUrl_).contents;
 		int nrows <- int(int(cityMatrixData["header"]["spatial"]["nrows"])/2);
 		int ncols <- int(int(cityMatrixData["header"]["spatial"]["ncols"])/2);
 		cityMatrixCell <- cityMatrixData["header"]["grid"];
@@ -365,7 +368,7 @@ global {
 		int y;
 		int id;
 		loop i from:0 to: (length(cityMatrixCell)-1){ 
-		 if((i mod nrows) mod 2 = 1 and int(i/ncols) mod 2 = 0){
+		 if((i mod nrows) mod 2 = 0 and int(i/ncols) mod 2 = 1){
 		 	//write "i:" + i + " x:" + (i mod nrows)/2 + " y:" + (int(i/ncols))/2 +  " id:" + int(cityMatrixCell[i]["type"]);    
 		    x<- int((i mod nrows)/2);
 		    y<-int((int(i/ncols))/2);
