@@ -786,7 +786,7 @@ experiment cityScience type: gui autorun: true{
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
 		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl fullscreen:1 draw_env:false
-		camera_pos: {2148.2776,1547.4971,12043.029} camera_look_pos: {2148.2776,1547.2869,0.0166} camera_up_vector: {0.0,1.0,0.0}{
+		camera_pos: {2160.3206,1631.7982,12043.0275} camera_look_pos: {2160.3206,1631.588,0.0151} camera_up_vector: {0.0,1.0,0.0}{
 		//camera_pos: {2428.2049,2969.8873,11644.0583} camera_look_pos: {2428.2049,2969.684,-0.0081} camera_up_vector: {0.0,1.0,0.0}{
 			species cell aspect:default;// refresh: on_modification_cells;
 			species road ;
