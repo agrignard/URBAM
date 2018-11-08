@@ -762,16 +762,16 @@ species NetworkingAgent skills:[network] {
 			  int y;
 			  int id;
 			  loop i from:0 to: (length(gridlist)-2){ 
-			    if((i mod nrows) mod 2 = 1 and int(i/ncols) mod 2 = 0){
+			    if((i mod nrows) mod 2 = 0 and int(i/ncols) mod 2 = 0){
 			 	  //write "i:" + i + " x:" + (i mod nrows)/2 + " y:" + (int(i/ncols))/2 +  " id:" + int(gridlist[i]);    
 			      x<- int((i mod nrows)/2);
 			      y<-int((int(i/ncols))/2);
 			      id<-int(gridlist[i]);
 			      if(id!=-2 and id !=-1 and id!=6 ){
-	      	  	    ask world{do createCell(id+1, grid_width-1-x, y);}	
+	      	  	    ask world{do createCell(id+1, x, y);}	
 	      	      } 
 	      	      if (id=-1){
-			        cell current_cell <- cell[grid_width-1-x,y];
+			        cell current_cell <- cell[x,y];
 				    ask current_cell{ do erase_building;}
 			      }   
 			    } 		
