@@ -40,7 +40,8 @@ global{
 	
 	bool load_grid_file_from_cityIO parameter: 'Online Grid:' category: 'Simulation' <- false;
 	bool load_grid_file parameter: 'Offline Grid:' category: 'Simulation' <- false; 
-	bool load_grid_file_from_processing parameter: 'Offline Grid Processing:' category: 'Simulation' <- false; 
+	bool randomGrid parameter: 'RandomGrid:' category: 'Simulation' <- true; 
+	bool udpReader parameter: 'Listening to UDP:' category: 'Simulation' <- false; 
 	
 	
 	
@@ -57,7 +58,9 @@ global{
 	bool on_modification_bds <- false update: false;
 	
 	
-	map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::50];
+	//ORIGINAL map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::50];
+	
+	map<string,int> max_traffic_per_mode <- ["car"::50, "bike"::50, "walk"::50];
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n write only the modes that have to be drawn
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
 	//map<string,rgb> color_per_mode <- ["car"::rgb(255,0,0), "bike"::rgb(0,255,0), "walk"::rgb(0,0,255), "pev"::#magenta];
@@ -134,9 +137,12 @@ global{
 		do init_buttons; 
 		do load_profiles;
 		block_size <- min([first(cell).shape.width,first(cell).shape.height]);
-		create NetworkingAgent number: 1 {
-		   do connect to: url protocol: "udp_server" port: port ;
-		}	
+		if(udpReader){
+			create NetworkingAgent number: 1 {
+		     do connect to: url protocol: "udp_server" port: port ;
+		    }		
+		}
+		
 	}
 	
 	action initMetaGraph{
@@ -204,19 +210,14 @@ global{
 	}
 	
 	reflex test_load_file when: load_grid_file and every(100#cycle){
-		write "load" + file_cpt;
 		do load_matrix("../includes/6x6_" +file_cpt+".csv");
 		file_cpt <- (file_cpt+ 1) mod 5;
 	}
 	
-	reflex test_load_file_from_processing when: load_grid_file_from_processing and every(100#cycle){
-		write file_cpt;
-		do load_matrix_from_processing("../includes/grid_"+file_cpt+".json");
-		file_cpt <- (file_cpt) mod 5;
-		file_cpt<-file_cpt+1;
-	}
-	
-	
+	reflex randomGridUpdate when:randomGrid and every(1000#cycle){
+		do randomGrid;
+	} 
+		
 	reflex update_graph when: every(3 #cycle) {
 		map<road,float> weights <- traffic_jam ? road as_map (each::(each.shape.perimeter)) : road as_map (each::(each.shape.perimeter * (min([10,1/exp(-each.nb_people/road_capacity)]))));
 		graph_per_mode["car"] <- graph_per_mode["car"] with_weights weights;
@@ -347,6 +348,30 @@ global{
 		}
 	}
 	
+	
+	
+   action randomGrid{
+   	int id;
+   	loop i from: 0 to: 5 {
+			loop j from: 0 to: 5 {
+				    if (flip(0.5)){
+				        id <- 1+rnd(5);	
+				    }else{
+				    	id<--1;
+				    }
+					
+					if (id > 0) {
+                     do createCell(id, j, i);
+					}
+					cell current_cell <- cell[j,i];
+					current_cell.is_active <- id<0?false:true;
+					if (id<=0){					
+						ask current_cell{ do erase_building;}
+					}
+			}
+		}
+   }
+	
 	action load_cityIO_matrix(string cityIOUrl_) {
 		map<string, unknown> cityMatrixData;
 	    list<map<string, int>> cityMatrixCell;	
@@ -366,33 +391,6 @@ global{
 		    cell current_cell <- cell[l["x"],l["y"]];
 			ask current_cell{ do erase_building;}
 		  }     
-        }	
-	}	
-	
-	action load_matrix_from_processing(string cityIOUrl_){
-		map<string, unknown> cityMatrixData;
-		list<map<string, int>> cityMatrixCell;
-		cityMatrixData <- json_file(cityIOUrl_).contents;
-		int nrows <- int(int(cityMatrixData["header"]["spatial"]["nrows"])/2);
-		int ncols <- int(int(cityMatrixData["header"]["spatial"]["ncols"])/2);
-		cityMatrixCell <- cityMatrixData["header"]["grid"];
-		int x;
-		int y;
-		int id;
-		loop i from:0 to: (length(cityMatrixCell)-1){ 
-		 if((i mod nrows) mod 2 = 0 and int(i/ncols) mod 2 = 1){
-		 	//write "i:" + i + " x:" + (i mod nrows)/2 + " y:" + (int(i/ncols))/2 +  " id:" + int(cityMatrixCell[i]["type"]);    
-		    x<- int((i mod nrows)/2);
-		    y<-int((int(i/ncols))/2);
-		    id<-int(cityMatrixCell[i]["type"]);
-		    if(id!=-2 and id !=-1 and id!=6 ){
-      	  	do createCell(id+1, x, y);	
-      	  } 
-      	  if (id=-1){
-		    cell current_cell <- cell[x,y];
-			ask current_cell{ do erase_building;}
-		  }    
-		 } 		
         }	
 	}	
 }
@@ -785,7 +783,7 @@ experiment cityScience type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
-		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl fullscreen:1 draw_env:false
+		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false //fullscreen:1
 		camera_pos: {2160.3206,1631.7982,12043.0275} camera_look_pos: {2160.3206,1631.588,0.0151} camera_up_vector: {0.0,1.0,0.0}{
 		//camera_pos: {2428.2049,2969.8873,11644.0583} camera_look_pos: {2428.2049,2969.684,-0.0081} camera_up_vector: {0.0,1.0,0.0}{
 			species cell aspect:default;// refresh: on_modification_cells;
