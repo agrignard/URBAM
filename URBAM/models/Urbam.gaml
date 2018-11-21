@@ -808,19 +808,37 @@ experiment cityScience type: gui autorun: true{
 			
 			event["n"] action: {people_aspect<-"hide";};
 			event["m"] action: {people_aspect<-"mode";};
-			event["p"] action: {people_aspect<-"profile";};
+			//event["p"] action: {people_aspect<-"profile";};
 			event["a"] action: {people_aspect<-"dynamic_abstract";};
-			
+		
 			event["w"] action: {blackMirror<-!blackMirror;};
 			event["b"] action: {show_building<-!show_building;};
 			 
 			event["g"] action: {show_cells<-!show_cells;}; 
 			
+			event["o"] action: {weight_car<-weight_car-0.1;}; 
+			event["p"] action: {weight_car<-weight_car+0.1;};
+			
+			event["u"] action: {weight_bike<-weight_bike-0.1;}; 
+			event["i"] action: {weight_bike<-weight_bike+0.1;};
+			
+			event["t"] action: {weight_pev<-weight_pev-0.1;}; 
+			event["y"] action: {weight_pev<-weight_pev+0.1;};
+			
 			graphics "the graph" {
 				loop edge over: metagraph.edges {
 					draw edge color: #blue;
 				}
-			}  
+			} 
+			
+			graphics "mobility" {
+					point hpos <- {world.shape.width * 1.1, world.shape.height * 1.1};
+					float barH <- world.shape.width * 0.01;
+					float factor <-  world.shape.width * 0.1;
+				    draw rectangle(weight_car * factor,barH) color: color_per_mode["car"] at: {hpos.x, hpos.y};
+				    draw rectangle(weight_bike * factor,barH) color: color_per_mode["bike"] at: {hpos.x, hpos.y+barH};
+				    draw rectangle(weight_pev * factor,barH) color: color_per_mode["pev"] at: {hpos.x, hpos.y+barH*2};
+			} 
 		}
 				
 	    //Bouton d'action
