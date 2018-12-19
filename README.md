@@ -4,6 +4,7 @@ https://youtu.be/6L6TCuCNaSw
 &
 https://youtu.be/iqvK5LcDXwo
 
-Developed with GAMA 1.8 https://gama-platform.github.io/download
+made with [gama 1.8](https://github.com/gama-platform/gama/releases)
+![](https://github.com/agrignard/r_adiohead_10kandOK/blob/master/urbamobility.png?raw=true)
 
 
