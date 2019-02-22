@@ -11,7 +11,7 @@ model Urbam
 global{
 	//PARAMETERS
 	
-	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
+	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.75 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
 	float weight_pev  step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" <- 0.5;
 	
@@ -40,8 +40,8 @@ global{
 	
 	bool load_grid_file_from_cityIO parameter: 'Online Grid:' category: 'Simulation' <- false;
 	bool load_grid_file parameter: 'Offline Grid:' category: 'Simulation' <- false; 
-	bool randomGrid parameter: 'RandomGrid:' category: 'Simulation' <- true; 
-	bool udpReader parameter: 'Listening to UDP:' category: 'Simulation' <- false; 
+	bool randomGrid parameter: 'RandomGrid:' category: 'Simulation' <- false; 
+	bool udpReader parameter: 'Listening to UDP:' category: 'Simulation' <- true; 
 	
 	
 	
@@ -455,7 +455,7 @@ species building {
 	}
 	aspect default {
 		//if show_building {draw shape scaled_by building_scale color: color;}
-		if show_building {draw shape scaled_by 0.5 color: rgb(100,100,100);}
+		//if show_building {draw shape scaled_by 0.5 color: rgb(100,100,100);}
 		if show_building {draw shape scaled_by building_scale*1.1 empty:true color: color;}
 	}
 }
