@@ -40,8 +40,8 @@ global{
 	
 	bool load_grid_file_from_cityIO parameter: 'Online Grid:' category: 'Simulation' <- false;
 	bool load_grid_file parameter: 'Offline Grid:' category: 'Simulation' <- false; 
-	bool randomGrid parameter: 'RandomGrid:' category: 'Simulation' <- false; 
-	bool udpReader parameter: 'Listening to UDP:' category: 'Simulation' <- true; 
+	bool randomGrid parameter: 'RandomGrid:' category: 'Simulation' <- true; 
+	bool udpReader parameter: 'Listening to UDP:' category: 'Simulation' <- false; 
 	
 	
 	
@@ -844,9 +844,9 @@ experiment cityScience type: gui autorun: true{
 					float barH <- world.shape.width * 0.01;
 					float factor <-  world.shape.width * 0.1;
 				    draw rectangle(length(people where (each.mobility_mode = "car"))/length(people) * world.shape.width,barH) color: color_per_mode["car"] at: {world.shape.width/2, world.shape.height};
-				    draw rectangle(length(people where (each.mobility_mode = "walk"))/length(people) * world.shape.width,barH) color: color_per_mode["walk"] at: {world.shape.width/2, 0};
-				    draw rectangle(barH,length(people where (each.mobility_mode = "bike"))/length(people) * world.shape.height) color: color_per_mode["bike"] at: {0, world.shape.height/2};
-				    draw rectangle(barH,length(people where (each.mobility_mode = "pev"))/length(people) * world.shape.height) color: color_per_mode["pev"] at: {world.shape.width, world.shape.height/2};
+				    draw rectangle(length(people where (each.mobility_mode = "pev"))/length(people) * world.shape.width,barH) color: color_per_mode["pev"] at: {world.shape.width/2, 0};
+				    draw rectangle(barH,length(people where (each.mobility_mode = "walk"))/length(people) * world.shape.height) color: color_per_mode["walk"] at: {0, world.shape.height/2};
+				    draw rectangle(barH,length(people where (each.mobility_mode = "bike"))/length(people) * world.shape.height) color: color_per_mode["bike"] at: {world.shape.width, world.shape.height/2};
 				    
 				    
 				  
