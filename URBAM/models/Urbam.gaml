@@ -40,8 +40,8 @@ global{
 	
 	bool load_grid_file_from_cityIO parameter: 'Online Grid:' category: 'Simulation' <- false;
 	bool load_grid_file parameter: 'Offline Grid:' category: 'Simulation' <- false; 
-	bool randomGrid parameter: 'RandomGrid:' category: 'Simulation' <- true; 
-	bool udpReader parameter: 'Listening to UDP:' category: 'Simulation' <- false; 
+	bool randomGrid parameter: 'RandomGrid:' category: 'Simulation' <- false; 
+	bool udpReader parameter: 'Listening to UDP:' category: 'Simulation' <- true; 
 	
 	
 	
@@ -783,7 +783,7 @@ experiment cityScience type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
-		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false //fullscreen:1
+		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false fullscreen:1
 		camera_pos: {2160.3206,1631.7982,12043.0275} camera_look_pos: {2160.3206,1631.588,0.0151} camera_up_vector: {0.0,1.0,0.0}{
 		//camera_pos: {2428.2049,2969.8873,11644.0583} camera_look_pos: {2428.2049,2969.684,-0.0081} camera_up_vector: {0.0,1.0,0.0}{
 			species cell aspect:default;// refresh: on_modification_cells;
