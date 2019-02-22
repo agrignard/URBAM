@@ -17,30 +17,32 @@ global{
 	
 	int population_level <- 100 parameter: 'Population level' min: 0 max: 300 category: "General";
 	
-	string road_aspect parameter: 'Roads aspect:' category: 'Aspect' <-"split (5)" among:["default", "default (car)", "hide","road type","edge color","split (3)", "split (5)"];
-	float building_scale parameter: 'Building scale:' category: 'Aspect' <- 0.65 min: 0.2 max: 1.0; 
+	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"split (5)" among:["default", "default (car)", "hide","road type","edge color","split (3)", "split (5)"];
+	float spacing parameter: 'Spacing ' category: 'Road Aspect' <- 0.75 min:0.0 max: 1.5;
+	float line_width parameter: 'Line width' category: 'Road Aspect' <- 0.65 min:0.0 max: 3.0;
+	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
+	
+	float building_scale parameter: 'Building scale:' category: 'Building Aspect' <- 0.65 min: 0.2 max: 1.0; 
 	bool show_cells parameter: 'Show cells:' category: 'Aspect' <- false;
 	bool show_building parameter: 'Show Building:' category: 'Aspect' <- true;
-	float spacing parameter: 'Spacing ' category: 'Aspect' <- 0.75 min:0.0 max: 1.5;
-	float line_width parameter: 'Line width' category: 'Aspect' <- 0.65 min:0.0 max: 3.0;
-	bool dynamical_width parameter: 'Dynamical width' category: 'Aspect' <- true;
+	
 	
 	//SPATIAL PARAMETERS  
 	int grid_height <- 6;
 	int grid_width <- 6;
 	float environment_height <- 5000.0;
 	float environment_width <- 5000.0;
+	int global_people_size <-50;
 
 	bool blackMirror parameter: 'Dark Room' category: 'Aspect' <- true;
 	
 	
 	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)","hide"];
-	int global_shape_size parameter: 'People Size:' category: 'People Aspect' <-50 min:10 max:100;
 	
 	
-	bool load_grid_file_from_cityIO parameter: 'Online Grid:' category: 'Simulation' <- false;
-	bool load_grid_file parameter: 'Offline Grid:' category: 'Simulation' <- false; 
-	bool randomGrid parameter: 'RandomGrid:' category: 'Simulation' <- false; 
+	
+	bool load_grid_file_from_cityIO <-false; //parameter: 'Online Grid:' category: 'Simulation' <- false;
+	bool load_grid_file <- false;// parameter: 'Offline Grid:' category: 'Simulation'; 
 	bool udpReader parameter: 'Listening to UDP:' category: 'Simulation' <- true; 
 	
 	
@@ -64,7 +66,7 @@ global{
 	map<string,int> mode_order <- ["car"::0, "bike"::1, "walk"::2]; // order from 0 to n write only the modes that have to be drawn
 	map<string,rgb> color_per_mode <- ["car"::rgb(52,152,219), "bike"::rgb(192,57,43), "walk"::rgb(161,196,90), "pev"::#magenta];
 	//map<string,rgb> color_per_mode <- ["car"::rgb(255,0,0), "bike"::rgb(0,255,0), "walk"::rgb(0,0,255), "pev"::#magenta];
-	map<string,geometry> shape_per_mode <- ["car"::circle(global_shape_size*0.225), "bike"::circle(global_shape_size*0.21), "walk"::circle(global_shape_size*0.2), "pev"::circle(global_shape_size*0.21)];
+	map<string,geometry> shape_per_mode <- ["car"::circle(global_people_size*0.225), "bike"::circle(global_people_size*0.21), "walk"::circle(global_people_size*0.2), "pev"::circle(global_people_size*0.21)];
 	
 	map<string,point> offsets <- ["car"::{0,0}, "bike"::{0,0}, "walk"::{0,0}];
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
@@ -214,7 +216,7 @@ global{
 		file_cpt <- (file_cpt+ 1) mod 5;
 	}
 	
-	reflex randomGridUpdate when:randomGrid and every(100#cycle){
+	reflex randomGridUpdate when:!udpReader and every(100#cycle){
 		do randomGrid;
 	} 
 		
@@ -847,9 +849,7 @@ experiment cityScience type: gui autorun: true{
 				    draw rectangle(length(people where (each.mobility_mode = "pev"))/length(people) * world.shape.width,barH) color: color_per_mode["pev"] at: {world.shape.width/2, 0};
 				    draw rectangle(barH,length(people where (each.mobility_mode = "walk"))/length(people) * world.shape.height) color: color_per_mode["walk"] at: {0, world.shape.height/2};
 				    draw rectangle(barH,length(people where (each.mobility_mode = "bike"))/length(people) * world.shape.height) color: color_per_mode["bike"] at: {world.shape.width, world.shape.height/2};
-				    
-				    
-				  
+
 			}
 		}
 				
