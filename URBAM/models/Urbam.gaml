@@ -214,7 +214,7 @@ global{
 		file_cpt <- (file_cpt+ 1) mod 5;
 	}
 	
-	reflex randomGridUpdate when:randomGrid and every(1000#cycle){
+	reflex randomGridUpdate when:randomGrid and every(100#cycle){
 		do randomGrid;
 	} 
 		
@@ -455,7 +455,7 @@ species building {
 	}
 	aspect default {
 		//if show_building {draw shape scaled_by building_scale color: color;}
-		//if show_building {draw shape scaled_by 0.5 color: rgb(100,100,100);}
+		if show_building {draw shape scaled_by 0.5 color: rgb(100,100,100);}
 		if show_building {draw shape scaled_by building_scale*1.1 empty:true color: color;}
 	}
 }
@@ -838,11 +838,11 @@ experiment cityScience type: gui autorun: true{
 				    draw rectangle(weight_car * factor,barH) color: color_per_mode["car"] at: {hpos.x, hpos.y};
 				    draw rectangle(weight_bike * factor,barH) color: color_per_mode["bike"] at: {hpos.x, hpos.y+barH};
 				    draw rectangle(weight_pev * factor,barH) color: color_per_mode["pev"] at: {hpos.x, hpos.y+barH*2};
-			} 
+			}
 		}
 				
 	    //Bouton d'action
-		display action_buton name:"Actions possibles" ambient_light:100 	{
+		display action_buton background:#black name:"Actions possibles" ambient_light:100 	{
 			species button aspect:normal ;
 			event mouse_down action:activate_act;    
 		}
