@@ -47,7 +47,7 @@ global{
 	
 	
 	
-	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/citymatrix_volpe";
+	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/cityIO_gama";
 	
 	float computed_line_width;
 	float road_width;
@@ -72,6 +72,7 @@ global{
 	map<string,rgb> color_per_profile <- ["young poor"::#deepskyblue, "young rich"::#darkturquoise, "adult poor"::#orangered , "adult rich"::#coral,"old poor"::#darkslategrey,"old rich"::#lightseagreen];
 	map<string,list<rgb>> colormap_per_mode <- ["car"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "bike"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)], "walk"::[rgb(107,213,225),rgb(255,217,142),rgb(255,182,119),rgb(255,131,100),rgb(192,57,43)]];
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
+	map<string,rgb> color_per_id <- ["residentialS"::#red,"residentialM"::#green,"residentialL"::#blue,"officeS"::#yellow,"officeM"::#cyan,"officeL"::#white];
 	map<string,float> nb_people_per_size <- ["S"::10.0, "M"::50.0, "L"::100.0];
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],5::["office","M"],6::["office","L"]];
@@ -208,7 +209,7 @@ global{
 	}
 	
 	reflex test_load_file_from_cityIO when: load_grid_file_from_cityIO and every(10#cycle) {
-		do load_cityIO_matrix(cityIOUrl);
+		do load_cityIO_matrix_v2(cityIOUrl);
 	}
 	
 	reflex test_load_file when: load_grid_file and every(100#cycle){
@@ -374,7 +375,7 @@ global{
 		}
    }
 	
-	action load_cityIO_matrix(string cityIOUrl_) {
+	action load_cityIO_matrix_v1(string cityIOUrl_) {
 		map<string, unknown> cityMatrixData;
 	    list<map<string, int>> cityMatrixCell;	
 		try {
@@ -394,7 +395,37 @@ global{
 			ask current_cell{ do erase_building;}
 		  }     
         }	
-	}	
+	}
+	
+	
+	action load_cityIO_matrix_v2(string cityIOUrl_) {
+		map<string, unknown> cityMatrixData;
+	    list<map<string, int>> cityMatrixCell;	
+		try {
+			cityMatrixData <- json_file(cityIOUrl_).contents;
+		} catch {
+			cityMatrixData <- json_file("../includes/cityIO_gama.json").contents;
+			write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_gama.json";
+		}
+		int nbCols <- int(cityMatrixData["header"]["spatial"]["ncols"]);
+		int nbRows <- int(cityMatrixData["header"]["spatial"]["nrows"]);
+		//cityMatrixCell <- cityMatrixData["grid"];
+		//write 	cityMatrixCell;
+		loop i from: 0 to: nbCols-1 {
+			loop j from: 0 to: nbRows -1{
+				int id <-int(cityMatrixData["grid"][j*nbCols+i][0]);
+				//write id;
+      	  		if(id!=-2 and id !=-1 and id!=6 ){
+      	  			do createCell(id+1, i, j);	
+      	  		} 
+      	  		if (id=-1){
+		    		cell current_cell <- cell[i,j];
+					ask current_cell{ do erase_building;}
+		  		}   
+			}
+        } 	
+	}
+		
 }
 
 
@@ -451,9 +482,12 @@ species building {
 		}
 		cell(location).my_building <- nil;
 		do die;
+		
 	}
 	action define_color {
-		color <- rgb(color_per_type[type], size = "S" ? 50 : (size = "M" ? 100: 255)  );
+		//color <- rgb(color_per_type[type], size = "S" ? 50 : (size = "M" ? 100: 255)  );
+		color <- color_per_id[type+size];
+		write "type+size" + type+size;
 	}
 	aspect default {
 		//if show_building {draw shape scaled_by building_scale color: color;}
