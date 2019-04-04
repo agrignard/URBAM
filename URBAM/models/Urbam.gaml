@@ -885,6 +885,19 @@ experiment cityScience type: gui autorun: true{
 				    draw rectangle(barH,length(people where (each.mobility_mode = "bike"))/length(people) * world.shape.height) color: color_per_mode["bike"] at: {world.shape.width, world.shape.height/2};
 
 			}
+			
+			graphics "landuse" {
+					point hpos <- {world.shape.width * 1.1, world.shape.height * 1.1};
+					float barH <- world.shape.width * 0.01;
+					float factor <-  world.shape.width * 0.1;
+					loop i from:0 to:length(color_per_id){
+						draw square(world.shape.width*0.01) color: color_per_id.values[i] at: {i*world.shape.width*0.175, 0};
+						draw color_per_id.keys[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, 0} size:2#px;
+					}
+				    
+				    
+
+			}
 		}
 				
 	    //Bouton d'action
