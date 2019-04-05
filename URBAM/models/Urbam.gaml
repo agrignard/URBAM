@@ -76,6 +76,7 @@ global{
 	map<string,float> nb_people_per_size <- ["S"::10.0, "M"::50.0, "L"::100.0];
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],5::["office","M"],6::["office","L"]];
+	list fivefoods<-["Residential","Retail","Hotel","Office","Industrial","Park"];
 		
 
 
@@ -892,7 +893,7 @@ experiment cityScience type: gui autorun: true{
 					float factor <-  world.shape.width * 0.1;
 					loop i from:0 to:length(color_per_id){
 						draw square(world.shape.width*0.01) color: color_per_id.values[i] at: {i*world.shape.width*0.175, 0};
-						draw color_per_id.keys[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, 0} size:2#px;
+						draw fivefoods[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, 0} perspective: true font:font("Helvetica", 10 , #bold) size:1;
 					}
 				    
 				    
