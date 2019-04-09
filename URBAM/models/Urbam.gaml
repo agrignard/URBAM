@@ -13,7 +13,7 @@ global{
 	
 	float weight_car parameter: 'weight car' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.75 ;
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
-	float weight_pev  step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" <- 0.5;
+	float weight_pev  step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" <- 0.1;
 	
 	int population_level <- 40 parameter: 'Population level' min: 0 max: 300 category: "General";
 	
@@ -880,13 +880,16 @@ experiment cityScience type: gui autorun: true{
 					point hpos <- {world.shape.width * 1.1, world.shape.height * 1.1};
 					float barH <- world.shape.width * 0.01;
 					float factor <-  world.shape.width * 0.1;
-				    draw rectangle(length(people where (each.mobility_mode = "car"))/length(people) * world.shape.width,barH) color: color_per_mode["car"] at: {world.shape.width/2, world.shape.height};
-				    draw "car" color: color_per_mode["car"]  at: {world.shape.width/2, world.shape.height*1.02} font:font("Helvetica", 8 , #bold);
-				    draw rectangle(length(people where (each.mobility_mode = "pev"))/length(people) * world.shape.width,barH) color: color_per_mode["pev"] at: {world.shape.width/2, 0};
+				    draw rectangle(length(people where (each.mobility_mode = "car"))/length(people) * world.shape.width,barH) color: color_per_mode["car"] at: {world.shape.width/2, world.shape.height*0.99};
+				    draw "car" color: color_per_mode["car"]  at: {world.shape.width/2, world.shape.height*1.02} font:font("Helvetica", 8 , #italic);
+				    draw rectangle(length(people where (each.mobility_mode = "pev"))/length(people) * world.shape.width,barH) color: color_per_mode["pev"] at: {world.shape.width/2, -world.shape.height*0.04};
+				    if(length(people where (each.mobility_mode = "pev"))>0){
+				     draw "pev" color: color_per_mode["pev"] at: {world.shape.width/2, -world.shape.height*0.05} font:font("Helvetica", 8 , #italic);	
+				    } 
 				    draw rectangle(barH,length(people where (each.mobility_mode = "walk"))/length(people) * world.shape.height) color: color_per_mode["walk"] at: {0, world.shape.height/2};
-				    draw "walk" color: color_per_mode["walk"] at: {-world.shape.width*0.02, world.shape.height/2} font:font("Helvetica", 8 , #bold) rotate:90;
+				    draw "walk" color: color_per_mode["walk"] at: {-world.shape.width*0.025, world.shape.height/2} font:font("Helvetica", 8 , #italic) rotate:90;
 				    draw rectangle(barH,length(people where (each.mobility_mode = "bike"))/length(people) * world.shape.height) color: color_per_mode["bike"] at: {world.shape.width, world.shape.height/2};
-				    draw "bike" color: color_per_mode["bike"] at: {world.shape.width*1.02, world.shape.height/2} font:font("Helvetica", 8 , #bold) rotate:-90;
+				    draw "bike" color: color_per_mode["bike"] at: {world.shape.width*1.025, world.shape.height/2} font:font("Helvetica", 8 , #italic) rotate:-90;
 
 			}
 			
