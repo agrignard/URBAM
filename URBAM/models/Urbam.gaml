@@ -881,9 +881,12 @@ experiment cityScience type: gui autorun: true{
 					float barH <- world.shape.width * 0.01;
 					float factor <-  world.shape.width * 0.1;
 				    draw rectangle(length(people where (each.mobility_mode = "car"))/length(people) * world.shape.width,barH) color: color_per_mode["car"] at: {world.shape.width/2, world.shape.height};
+				    draw "car" color: color_per_mode["car"]  at: {world.shape.width/2, world.shape.height*1.02} font:font("Helvetica", 8 , #bold);
 				    draw rectangle(length(people where (each.mobility_mode = "pev"))/length(people) * world.shape.width,barH) color: color_per_mode["pev"] at: {world.shape.width/2, 0};
 				    draw rectangle(barH,length(people where (each.mobility_mode = "walk"))/length(people) * world.shape.height) color: color_per_mode["walk"] at: {0, world.shape.height/2};
+				    draw "walk" color: color_per_mode["walk"] at: {-world.shape.width*0.02, world.shape.height/2} font:font("Helvetica", 8 , #bold) rotate:90;
 				    draw rectangle(barH,length(people where (each.mobility_mode = "bike"))/length(people) * world.shape.height) color: color_per_mode["bike"] at: {world.shape.width, world.shape.height/2};
+				    draw "bike" color: color_per_mode["bike"] at: {world.shape.width*1.02, world.shape.height/2} font:font("Helvetica", 8 , #bold) rotate:-90;
 
 			}
 			
@@ -892,8 +895,8 @@ experiment cityScience type: gui autorun: true{
 					float barH <- world.shape.width * 0.01;
 					float factor <-  world.shape.width * 0.1;
 					loop i from:0 to:length(color_per_id){
-						draw square(world.shape.width*0.01) color: color_per_id.values[i] at: {i*world.shape.width*0.175, 0};
-						draw fivefoods[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, 0} perspective: true font:font("Helvetica", 8 , #bold) size:1;
+						draw square(world.shape.width*0.02) empty:true color: color_per_id.values[i] at: {i*world.shape.width*0.175, -20};
+						draw fivefoods[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, -10} perspective: true font:font("Helvetica", 8 , #bold);
 					}
 				    
 				    
