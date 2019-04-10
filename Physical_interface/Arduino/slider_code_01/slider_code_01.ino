@@ -34,5 +34,7 @@ void loop(){
 
   //Serial.print("Voltage = "); // shows the voltage measured     
   Serial.println(Voltage,3); //3 digits after decimal point
+  Serial.println("hello"); //3 digits after decimal point
   delay(500);   // 1/2 sec so your display doesnt't scroll too fast
+  
 }
