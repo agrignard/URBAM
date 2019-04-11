@@ -121,7 +121,8 @@ global{
 	]; 
 	
 	// Network
-	int port <- 9877;
+	int scaningUDPPort <- 9877;
+	int interfaceUDPPort <- 9878;
 	string url <- "localhost";
 	
 	init {
@@ -143,8 +144,14 @@ global{
 		block_size <- min([first(cell).shape.width,first(cell).shape.height]);
 		if(udpReader){
 			create NetworkingAgent number: 1 {
-		     do connect to: url protocol: "udp_server" port: port ;
-		    }		
+			 type <-"scanner";	
+		     do connect to: url protocol: "udp_server" port: scaningUDPPort ;
+		    } 
+			/*create NetworkingAgent number: 1 {
+			 type <-"interface";	
+		     do connect to: url protocol: "udp_server" port: interfaceUDPPort ;
+		    }*/
+			
 		}
 		
 	}
@@ -383,7 +390,7 @@ global{
 			cityMatrixData <- json_file(cityIOUrl_).contents;
 		} catch {
 			cityMatrixData <- json_file("../includes/cityIO_Kendall.json").contents;
-			write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_Kendall.json";
+			//write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_Kendall.json";
 		}
 		cityMatrixCell <- cityMatrixData["grid"];	
 		loop l over: cityMatrixCell { 
@@ -488,7 +495,6 @@ species building {
 	action define_color {
 		//color <- rgb(color_per_type[type], size = "S" ? 50 : (size = "M" ? 100: 255)  );
 		color <- color_per_id[type+size];
-		write "type+size" + type+size;
 	}
 	aspect default {
 		//if show_building {draw shape scaled_by building_scale color: color;}
@@ -784,33 +790,39 @@ grid button width:3 height:4
 }
 
 species NetworkingAgent skills:[network] {
+	string type;
 	string previousMess <-"";
 	reflex fetch {	
 		if (length(mailbox) > 0) {
 			message s <- last(mailbox);
 			if(s.contents !=previousMess){	
 			  previousMess<-s.contents;
-			  list gridlist <- string(s.contents) split_with(";");
-			  int nrows <- 12;
-			  int ncols <- 12;
-			  int x;
-			  int y;
-			  int id;
-			  loop i from:0 to: (length(gridlist)-2){ 
-			    if((i mod nrows) mod 2 = 0 and int(i/ncols) mod 2 = 0){
-			 	  //write "i:" + i + " x:" + (i mod nrows)/2 + " y:" + (int(i/ncols))/2 +  " id:" + int(gridlist[i]);    
-			      x<- int((i mod nrows)/2);
-			      y<-int((int(i/ncols))/2);
-			      id<-int(gridlist[i]);
-			      if(id!=-2 and id !=-1 and id!=6 ){
-	      	  	    ask world{do createCell(id+1, x, y);}	
-	      	      } 
-	      	      if (id=-1){
-			        cell current_cell <- cell[x,y];
-				    ask current_cell{ do erase_building;}
-			      }   
-			    } 		
-	          }	
+			  if(type="scanner"){
+			  	list gridlist <- string(s.contents) split_with(";");
+			  	int nrows <- 12;
+			  	int ncols <- 12;
+			  	int x;
+			  	int y;
+			  	int id;
+			  	loop i from:0 to: (length(gridlist)-2){ 
+			    	if((i mod nrows) mod 2 = 0 and int(i/ncols) mod 2 = 0){   
+			      		x<- int((i mod nrows)/2);
+			      		y<-int((int(i/ncols))/2);
+			      		id<-int(gridlist[i]);
+			      	if(id!=-2 and id !=-1 and id!=6 ){
+	      	  	    	ask world{do createCell(id+1, x, y);}	
+	      	      	} 
+	      	      	if (id=-1){
+			        	cell current_cell <- cell[x,y];
+				    	ask current_cell{ do erase_building;}
+			      	}	   
+			    	} 		
+	          	}
+	          	population_level<-30+int(gridlist[length(gridlist)-1])*50;
+	          	write population_level;
+			  }
+			  if(type="interface"){
+			  }
 			}	
 	    }
 	}
@@ -820,7 +832,7 @@ experiment cityScience type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	layout value: horizontal([0::7131,1::2869]) tabs:true;
 	output {
-		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false fullscreen:1
+		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false //fullscreen:1
 		camera_pos: {2160.3206,1631.7982,12043.0275} camera_look_pos: {2160.3206,1631.588,0.0151} camera_up_vector: {0.0,1.0,0.0}{
 		//camera_pos: {2428.2049,2969.8873,11644.0583} camera_look_pos: {2428.2049,2969.684,-0.0081} camera_up_vector: {0.0,1.0,0.0}{
 			species cell aspect:default;// refresh: on_modification_cells;
