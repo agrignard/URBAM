@@ -5,10 +5,10 @@
   Reading serial port from Arduino at Processing
 */ /////////////////////////////////////
 import processing.serial.*;
-import cc.arduino.*;
+//import cc.arduino.*;
 import hypermedia.net.*;
 
-Arduino arduino;
+//Arduino arduino;
 Serial myPort;
 private UDP udp; //Create UDP object for recieving
 private int PORT = 9878;
