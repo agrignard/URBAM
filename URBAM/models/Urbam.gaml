@@ -43,7 +43,8 @@ global{
 	
 	bool load_grid_file_from_cityIO <-false; //parameter: 'Online Grid:' category: 'Simulation' <- false;
 	bool load_grid_file <- false;// parameter: 'Offline Grid:' category: 'Simulation'; 
-	bool udpReader parameter: 'Listening to UDP:' category: 'Simulation' <- true; 
+	bool udpScannerReader <- false; 
+	bool udpSliderReader <- true; 
 	
 	
 	
@@ -142,18 +143,18 @@ global{
 		do init_buttons; 
 		do load_profiles;
 		block_size <- min([first(cell).shape.width,first(cell).shape.height]);
-		if(udpReader){
+		if(udpScannerReader){
 			create NetworkingAgent number: 1 {
 			 type <-"scanner";	
 		     do connect to: url protocol: "udp_server" port: scaningUDPPort ;
-		    } 
-			/*create NetworkingAgent number: 1 {
+		    }
+		}
+		if(udpSliderReader){
+			create NetworkingAgent number: 1 {
 			 type <-"interface";	
 		     do connect to: url protocol: "udp_server" port: interfaceUDPPort ;
-		    }*/
-			
+		    }	   
 		}
-		
 	}
 	
 	action initMetaGraph{
@@ -225,7 +226,7 @@ global{
 		file_cpt <- (file_cpt+ 1) mod 5;
 	}
 	
-	reflex randomGridUpdate when:!udpReader and every(100#cycle){
+	reflex randomGridUpdate when:!udpScannerReader and every(1000#cycle){
 		do randomGrid;
 	} 
 		
@@ -818,11 +819,10 @@ species NetworkingAgent skills:[network] {
 			      	}	   
 			    	} 		
 	          	}
-	          	weight_car <-float(gridlist[length(gridlist)-1])/5.0;
-	          	//population_level<-1+float(gridlist[length(gridlist)-1])*50;
-	          	//write population_level;
 			  }
 			  if(type="interface"){
+			  	weight_car<-float(previousMess)/5.0;
+			  	write weight_car;
 			  }
 			}	
 	    }
