@@ -45,6 +45,7 @@ global{
 	bool load_grid_file <- false;// parameter: 'Offline Grid:' category: 'Simulation'; 
 	bool udpScannerReader <- false; 
 	bool udpSliderReader <- true; 
+	bool editionMode <-false;
 	
 	
 	
@@ -96,7 +97,6 @@ global{
 	int file_cpt <- 1;
 
 	map<string,graph> graph_per_mode;
-	graph<geometry, geometry> metagraph;
 	
 	float road_capacity <- 10.0;
 	bool traffic_jam <- true parameter: true;
@@ -156,12 +156,7 @@ global{
 		    }	   
 		}
 	}
-	
-	action initMetaGraph{
-		list<point> cellList <- cell where !each.is_active collect each.location;
-		metagraph<-as_distance_graph(cellList, int(first(cell).shape.width));
-	}
-	
+		
 	action load_profiles {
 		create profile from: csv_file(profile_file,";", true) with: [proportionS::float(get("proportionS")),proportionM::float(get("proportionM")),proportionL::float(get("proportionL")),
 			name::string(get("typo")), max_dist_walk::float(get("max_dist_walk")),max_dist_bike::float(get("max_dist_bike")),max_dist_pev::float(get("max_dist_pev"))
@@ -226,7 +221,7 @@ global{
 		file_cpt <- (file_cpt+ 1) mod 5;
 	}
 	
-	reflex randomGridUpdate when:!udpScannerReader and every(1000#cycle){
+	reflex randomGridUpdate when:!udpScannerReader and !editionMode and every(1000#cycle){
 		do randomGrid;
 	} 
 		
@@ -829,11 +824,15 @@ species NetworkingAgent skills:[network] {
 	}
 }
 
-experiment cityScience type: gui autorun: true{
+
+experiment cityScienceScreenEditionMode type: gui autorun: true{
+	init{
+		editionMode<-true;
+	}
 	float minimum_cycle_duration <- 0.05;
-	layout value: horizontal([0::7131,1::2869]) tabs:true;
+	layout value: horizontal([0::7131,1::2869]);
 	output {
-		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false fullscreen:1
+		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false 
 		camera_pos: {2160.3206,1631.7982,12043.0275} camera_look_pos: {2160.3206,1631.588,0.0151} camera_up_vector: {0.0,1.0,0.0}{
 		//camera_pos: {2428.2049,2969.8873,11644.0583} camera_look_pos: {2428.2049,2969.684,-0.0081} camera_up_vector: {0.0,1.0,0.0}{
 			species cell aspect:default;// refresh: on_modification_cells;
@@ -875,36 +874,6 @@ experiment cityScience type: gui autorun: true{
 			event["t"] action: {weight_pev<-weight_pev-0.1;}; 
 			event["y"] action: {weight_pev<-weight_pev+0.1;};
 			
-			graphics "the graph" {
-				loop edge over: metagraph.edges {
-					draw edge color: #blue;
-				}
-			} 
-			
-			/*graphics "mobility" {
-					point hpos <- {world.shape.width * 1.1, world.shape.height * 1.1};
-					float barH <- world.shape.width * 0.01;
-					float factor <-  world.shape.width * 0.1;
-				    draw rectangle(weight_car * factor,barH) color: color_per_mode["car"] at: {hpos.x, hpos.y};
-				    draw rectangle(weight_bike * factor,barH) color: color_per_mode["bike"] at: {hpos.x, hpos.y+barH};
-				    draw rectangle(weight_pev * factor,barH) color: color_per_mode["pev"] at: {hpos.x, hpos.y+barH*2};
-			}*/
-			/*graphics "indicator" {
-					point hpos <- {world.shape.width * 1.1, world.shape.height * 1.1};
-					float barH <- world.shape.width * 0.01;
-					float factor <-  world.shape.width * 0.1;
-				    draw rectangle(length(people where (each.mobility_mode = "car"))/length(people) * world.shape.width,barH) color: color_per_mode["car"] at: {world.shape.width/2, world.shape.height*0.99};
-				    draw "car" color: color_per_mode["car"]  at: {world.shape.width/2, world.shape.height*1.02} font:font("Helvetica", 8 , #italic);
-				    draw rectangle(length(people where (each.mobility_mode = "pev"))/length(people) * world.shape.width,barH) color: color_per_mode["pev"] at: {world.shape.width/2, -world.shape.height*0.04};
-				    if(length(people where (each.mobility_mode = "pev"))>0){
-				     draw "pev" color: color_per_mode["pev"] at: {world.shape.width/2, -world.shape.height*0.05} font:font("Helvetica", 8 , #italic);	
-				    } 
-				    draw rectangle(barH,length(people where (each.mobility_mode = "walk"))/length(people) * world.shape.height) color: color_per_mode["walk"] at: {0, world.shape.height/2};
-				    draw "walk" color: color_per_mode["walk"] at: {-world.shape.width*0.025, world.shape.height/2} font:font("Helvetica", 8 , #italic) rotate:90;
-				    draw rectangle(barH,length(people where (each.mobility_mode = "bike"))/length(people) * world.shape.height) color: color_per_mode["bike"] at: {world.shape.width, world.shape.height/2};
-				    draw "bike" color: color_per_mode["bike"] at: {world.shape.width*1.025, world.shape.height/2} font:font("Helvetica", 8 , #italic) rotate:-90;
-
-			}*/
 			
 			graphics "mobilityMode" {
 				    draw circle(world.shape.width * 0.01) color: color_per_mode["walk"] at: {world.shape.width * 0.2, world.shape.height};
@@ -924,7 +893,7 @@ experiment cityScience type: gui autorun: true{
 					point hpos <- {world.shape.width * 1.1, world.shape.height * 1.1};
 					float barH <- world.shape.width * 0.01;
 					float factor <-  world.shape.width * 0.1;
-					loop i from:0 to:length(color_per_id){
+					loop i from:0 to:length(color_per_id)-1{
 						draw square(world.shape.width*0.02) empty:true color: color_per_id.values[i] at: {i*world.shape.width*0.175, -50};
 						draw fivefoods[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, -40} perspective: true font:font("Helvetica", 8 , #bold);
 					}
@@ -935,7 +904,81 @@ experiment cityScience type: gui autorun: true{
 		display action_buton background:#black name:"Actions possibles" ambient_light:100 	{
 			species button aspect:normal ;
 			event mouse_down action:activate_act;    
-		}
-		
+		}	
+	}
+}
+
+experiment cityScienceTable type: gui autorun: true{
+	float minimum_cycle_duration <- 0.05;
+	output {
+		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false fullscreen:1
+		camera_pos: {2160.3206,1631.7982,12043.0275} camera_look_pos: {2160.3206,1631.588,0.0151} camera_up_vector: {0.0,1.0,0.0}{
+		//camera_pos: {2428.2049,2969.8873,11644.0583} camera_look_pos: {2428.2049,2969.684,-0.0081} camera_up_vector: {0.0,1.0,0.0}{
+			species cell aspect:default;// refresh: on_modification_cells;
+			species road ;
+			species people;
+			species building;// refresh: on_modification_bds;
+			
+			graphics "mobilityMode" {
+				    draw circle(world.shape.width * 0.01) color: color_per_mode["walk"] at: {world.shape.width * 0.2, world.shape.height};
+					draw "walk" color: color_per_mode["walk"]  at: {world.shape.width * 0.2+world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+					
+					draw circle(world.shape.width * 0.01) color: color_per_mode["bike"] at: {world.shape.width * 0.4, world.shape.height};
+					draw "bike" color: color_per_mode["bike"]  at: {world.shape.width * 0.4 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+					
+					draw circle(world.shape.width * 0.01) color: color_per_mode["car"] at: {world.shape.width * 0.6, world.shape.height};
+					draw "car" color: color_per_mode["car"]  at: {world.shape.width * 0.6 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+					
+					draw circle(world.shape.width * 0.01) color: color_per_mode["pev"] at: {world.shape.width * 0.8, world.shape.height};
+					draw "pev" color: color_per_mode["pev"]  at: {world.shape.width * 0.8 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+			}
+			
+			graphics "landuse" {
+					point hpos <- {world.shape.width * 1.1, world.shape.height * 1.1};
+					float barH <- world.shape.width * 0.01;
+					float factor <-  world.shape.width * 0.1;
+					loop i from:0 to:length(color_per_id)-1{
+						draw square(world.shape.width*0.02) empty:true color: color_per_id.values[i] at: {i*world.shape.width*0.175, -50};
+						draw fivefoods[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, -40} perspective: true font:font("Helvetica", 8 , #bold);
+					}
+			}
+		}		
+	}
+}
+
+
+experiment cityScienceDemo type: gui autorun: true{
+	float minimum_cycle_duration <- 0.05;
+	output {
+		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false fullscreen:0{
+			species cell aspect:default;// refresh: on_modification_cells;
+			species road ;
+			species people;
+			species building;// refresh: on_modification_bds;
+			
+			graphics "mobilityMode" {
+				    draw circle(world.shape.width * 0.01) color: color_per_mode["walk"] at: {world.shape.width * 0.2, world.shape.height};
+					draw "walk" color: color_per_mode["walk"]  at: {world.shape.width * 0.2+world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+					
+					draw circle(world.shape.width * 0.01) color: color_per_mode["bike"] at: {world.shape.width * 0.4, world.shape.height};
+					draw "bike" color: color_per_mode["bike"]  at: {world.shape.width * 0.4 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+					
+					draw circle(world.shape.width * 0.01) color: color_per_mode["car"] at: {world.shape.width * 0.6, world.shape.height};
+					draw "car" color: color_per_mode["car"]  at: {world.shape.width * 0.6 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+					
+					draw circle(world.shape.width * 0.01) color: color_per_mode["pev"] at: {world.shape.width * 0.8, world.shape.height};
+					draw "pev" color: color_per_mode["pev"]  at: {world.shape.width * 0.8 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+			}
+			
+			graphics "landuse" {
+					point hpos <- {world.shape.width * 1.1, world.shape.height * 1.1};
+					float barH <- world.shape.width * 0.01;
+					float factor <-  world.shape.width * 0.1;
+					loop i from:0 to:length(color_per_id)-1{
+						draw square(world.shape.width*0.02) empty:true color: color_per_id.values[i] at: {i*world.shape.width*0.175, -50};
+						draw fivefoods[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, -40} perspective: true font:font("Helvetica", 8 , #bold);
+					}
+			}
+		}		
 	}
 }
