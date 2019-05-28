@@ -22,6 +22,8 @@ global{
 				}
 			}
 		}
+		currentMacro<- one_of(macroCell);
+		currentMeso<- one_of(macroCell);
 	}
 }
 
@@ -65,7 +67,7 @@ species macroCell parent: cells{
 			loop j from:0 to:nbCells-1{
 				create mesoCell{
 					size<-myself.size/nbCells;
-					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
+					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2,0};
 				}
 			}
 		}	
@@ -84,7 +86,7 @@ species mesoCell parent:cells{
 			loop j from:0 to:nbCells-1{
 				create microCell{
 					size<-myself.size/nbCells;
-					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
+					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2,0};
 				}
 			}
 		}	
@@ -116,12 +118,12 @@ experiment REGICID{
 			species mesoCell aspect:meso;
 			species microCell aspect:micro;
 		}
-		display meso type:opengl{
+		display meso type:opengl  camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/3} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
 			species microCell aspect:micro; 
 		}
 
-		display micro type:opengl {//camera_pos: (currentMeso = nil) ? {0,0,0} : {currentMeso.location.x, currentMeso.location.y, world.shape.width/nbCells/nbCells} camera_look_pos: (currentMeso = nil) ? {0,0,0} : {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0, 1, 0}{
+		display micro type:opengl camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/12} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species microCell aspect:micro;
 		}
 	}
