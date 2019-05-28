@@ -19,6 +19,7 @@ global{
 	map<string, rgb> mesoCellsColors <- ["Residential"::#gamared, "Commercial"::#gamablue, "Industrial"::#gamaorange, "Educational"::#white, "Park"::#green,"Lake"::#blue];
 	list<string> microCellsTypes <- ["Residential", "Commercial", "Industrial", "Educational", "Park","Lake"];
 	map<string, rgb> microCellsColors <- ["Residential"::#gamared, "Commercial"::#gamablue, "Industrial"::#gamaorange, "Educational"::#white, "Park"::#green,"Lake"::#blue];
+	map<string, list<int>> macroCellsProportions <- ["City"::[30,30,30,10,10,5], "Village"::[10,7,5,5,50,10], "Park"::[5,5,1,0,85,15],"Lake"::[5,0,0,0,5,100]];
 	
 	// for the RNG
 	float a <- 25214903917.0;
@@ -110,11 +111,24 @@ species macroCell parent: cells{
 				create mesoCell{
 					size<-myself.size/nbCells;
 					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
-					type <- mesoCellsTypes[myself.rand(length(mesoCellsTypes))];
+					//type <- mesoCellsTypes[myself.rand(length(mesoCellsTypes))];
+					type <- myself.affectMesoCellType();
 					seed <- float(myself.rand(1000000));
 				}
 			}
 		}
+	}
+	
+	string affectMesoCellType {
+		int total <- sum(macroCellsProportions[type]);
+		int index <- rand(total);
+		int cumul <- macroCellsProportions[type][0];
+		int currentType <- 0;
+		loop  while: (index>cumul) {
+			currentType <- currentType + 1;
+			cumul <- cumul + macroCellsProportions[type][currentType]; 
+		}
+		return mesoCellsTypes[currentType];
 	}
 }
 
