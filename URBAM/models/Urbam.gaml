@@ -830,7 +830,6 @@ experiment cityScienceScreenEditionMode type: gui autorun: true{
 		editionMode<-true;
 	}
 	float minimum_cycle_duration <- 0.05;
-	layout value: horizontal([0::7131,1::2869]);
 	output {
 		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false 
 		camera_pos: {2160.3206,1631.7982,12043.0275} camera_look_pos: {2160.3206,1631.588,0.0151} camera_up_vector: {0.0,1.0,0.0}{

@@ -37,6 +37,8 @@ global{
 				}
 			}
 		}
+		currentMacro<- one_of(macroCell);
+		currentMeso<- one_of(macroCell);
 	}
 	
 	
@@ -164,13 +166,13 @@ experiment REGICID{
 			species microCell aspect:micro;
 			event mouse_down action: activateMacro; 
 		}
-		display meso type:opengl{
+		display meso type:opengl  camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/3} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
 			species microCell aspect:micro; 
 			event mouse_down action: activateMeso; 			
 		}
 
-		display micro type:opengl {//camera_pos: (currentMeso = nil) ? {0,0,0} : {currentMeso.location.x, currentMeso.location.y, world.shape.width/nbCells/nbCells} camera_look_pos: (currentMeso = nil) ? {0,0,0} : {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0, 1, 0}{
+		display micro type:opengl camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/12} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species microCell aspect:micro;
 		}
 	}
