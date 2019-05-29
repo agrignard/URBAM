@@ -15,10 +15,13 @@ global{
 	cells currentMeso;
 	list<string> macroCellsTypes <- ["City", "Village", "Park","Lake"];
 	map<string, rgb> macroCellsColors <- ["City"::#gamaorange, "Village"::#gamared, "Park"::#green,"Lake"::#blue];
+	
 	list<string> mesoCellsTypes <- ["Residential", "Commercial", "Industrial", "Educational", "Park","Lake"];
 	map<string, rgb> mesoCellsColors <- ["Residential"::#gamared, "Commercial"::#gamablue, "Industrial"::#gamaorange, "Educational"::#white, "Park"::#green,"Lake"::#blue];
+	
 	list<string> microCellsTypes <- ["Residential", "Commercial", "Industrial", "Educational", "Park","Lake"];
 	map<string, rgb> microCellsColors <- ["Residential"::#gamared, "Commercial"::#gamablue, "Industrial"::#gamaorange, "Educational"::#white, "Park"::#green,"Lake"::#blue];
+	
 	map<string, list<int>> macroCellsProportions <- ["City"::[30,30,30,10,10,5], "Village"::[10,7,5,5,50,10], "Park"::[5,5,1,0,85,15],"Lake"::[5,0,0,0,5,100]];
 	
 	// for the RNG
@@ -28,6 +31,27 @@ global{
 	
 	
 	init{
+		do load_macro_grid("./../includes/Macro_Grid.csv");
+		currentMacro<- one_of(macroCell);
+		currentMeso<- one_of(macroCell);
+	}
+	
+	action load_macro_grid(string path_to_file) {
+		file my_csv_file <- csv_file(path_to_file,",");
+		matrix data <- matrix(my_csv_file);
+		loop i from: 0 to: data.rows - 1 {
+			loop j from: 0 to: data.columns - 1 {
+					create macroCell{
+					size<-world.shape.width/nbCells;
+					location<-{size*i+size/2,size*j+size/2};
+					seed <- float(rnd(1000000));
+					type <- string(data[i, j]);
+				}
+			}
+		}
+	}
+	
+	action createRandomGrid(string path_to_file) {
 		loop i from: 0 to: nbCells-1{
 			loop j from:0 to:nbCells-1{
 				create macroCell{
@@ -38,8 +62,6 @@ global{
 				}
 			}
 		}
-		currentMacro<- one_of(macroCell);
-		currentMeso<- one_of(macroCell);
 	}
 	
 	
@@ -94,8 +116,6 @@ species connection{
 }
 
 species macroCell parent: cells{
-//	string type <- 
-	
 	user_command "generate Meso"action: generateMeso;
 	action generateMeso{
 		currentMacro<-self;
@@ -189,6 +209,7 @@ experiment REGICID{
 		display micro type:opengl camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/12} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species microCell aspect:micro;
 		}
+		
 	}
 	
 }
