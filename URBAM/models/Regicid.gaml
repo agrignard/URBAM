@@ -10,7 +10,7 @@ model Regicid
 /* Insert your model definition here */
 
 global{
-	int nbCells<-6;
+	int nbCells<-10;
 	cells currentMacro;
 	cells currentMeso;
 	list<string> macroCellsTypes <- ["City", "Village", "Park","Lake"];
@@ -48,6 +48,7 @@ global{
 					location<-{size*i+size/2,size*j+size/2};
 					seed <- float(rnd(1000000));
 					type <- string(data[i, j]);
+					density<-rnd(10);
 				}
 			}
 		}
@@ -61,6 +62,7 @@ global{
 					location<-{size*i+size/2,size*j+size/2};
 					seed <- float(rnd(1000000));
 					type <- one_of(macroCellsTypes);
+					density<-rnd(10);
 				}
 			}
 		}
@@ -83,6 +85,7 @@ species cells{
 	string type; 
 	float seed;
 	float size;
+	int density;
 	cells currentSelectedCell;
 	list<float> seedList;
 	//for RNG
@@ -99,15 +102,23 @@ species cells{
 	}
 	
 	aspect macro{
-		draw square(size) color: macroCellsColors[type] border:#gamablue-25;
+		draw square(size) color: macroCellsColors[type] border:#black;
 	}
 	
 	aspect meso{
-		draw square(size) color:mesoCellsColors[type] border:#gamaorange-25;
+		draw square(size) color:mesoCellsColors[type] border:#black;
 	}
 	
 	aspect micro{
-		draw square(size) color: microCellsColors[type] border:#gamared-25;
+		draw square(size) color: microCellsColors[type] border:#black;
+	}
+	
+	aspect mesoTable{
+		draw square(size*nbCells) depth:density color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{175+(location.x-currentMacro.location.x)*nbCells,world.shape.height/2+(location.y-currentMacro.location.y)*nbCells};
+	}
+
+	aspect microTable{
+		draw square(size*nbCells*nbCells) depth:density color:microCellsColors[type] border:microCellsColors[type]-25 at:{300+(location.x-currentMeso.location.x)*nbCells*nbCells,world.shape.height/2+(location.y-currentMeso.location.y)*nbCells*nbCells};
 	}
 	
 }
@@ -124,6 +135,7 @@ species macroCell parent: cells{
 	user_command "Village"action: modifyToVillage;
 	user_command "Park"action: modifyToPark;
 	user_command "Lake"action: modifyToLake;
+	
 	action generateMeso{
 		currentMacro<-self;
 		ask mesoCell{
@@ -140,8 +152,12 @@ species macroCell parent: cells{
 					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
 					type <- myself.affectMesoCellType();
 					seed <- float(myself.rand(1000000));
+					density<-rnd(10);
 				}
 			}
+		}
+		ask first(mesoCell){
+			do generateMicro;
 		}
 	}
 	
@@ -162,15 +178,19 @@ species macroCell parent: cells{
 	
 	action modifyToCity{
 		type<-macroCellsTypes[0];
+		do generateMeso;
 	}
 	action modifyToVillage{
 		type<-macroCellsTypes[1];
+		do generateMeso;
 	}
 	action modifyToPark{
 		type<-macroCellsTypes[2];
+		do generateMeso;
 	}
 	action modifyToLake{
 		type<-macroCellsTypes[3];
+		do generateMeso;
 	}
 }
 
@@ -198,6 +218,7 @@ species mesoCell parent:cells{
 					//type <- microCellsTypes[myself.rand(length(microCellsTypes))];
 					type <- myself.affectMicroCellType();
 					seed <- float(myself.rand(1000000));
+					density<-rnd(10);
 				}
 			}
 		}	
@@ -213,21 +234,27 @@ species mesoCell parent:cells{
 	}
 	action modifyToResidential{
 		type<-mesoCellsTypes[0];
+		do generateMicro;
 	}
 	action modifyToCommercial{
 		type<-mesoCellsTypes[1];
+		do generateMicro;
 	}
 	action modifyToIndustrial{
 		type<-mesoCellsTypes[2];
+		do generateMicro;
 	}
 	action modifyToEducational{
 		type<-mesoCellsTypes[3];
+		do generateMicro;
 	}
 	action modifyToPark{
 		type<-mesoCellsTypes[4];
+		do generateMicro;
 	}
 	action modifyToLake{
 		type<-mesoCellsTypes[5];
+		do generateMicro;
 	}
 	
 	string affectMicroCellType {
@@ -292,26 +319,34 @@ species microConnection parent: connection{
 
 experiment REGICID{
 	output{
-		layout #split;
-		display macro type:opengl{
+		//layout #split;
+		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
+		display macro type:opengl draw_env:false{
 			species macroCell aspect:macro;
 			//species mesoCell aspect:meso;
 			//species microCell aspect:micro;
 			event mouse_down action: activateMacro; 
 		}
-		display meso type:opengl  camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/3} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display meso type:opengl  draw_env:false camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCells*0.8)} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
-			species microCell aspect:micro; 
+			//species microCell aspect:micro; 
 			event mouse_down action: activateMeso; 			
 		}
 
-		display micro type:opengl camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/12} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display micro type:opengl draw_env:false camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCells*0.8)*(nbCells*0.8))} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species microCell aspect:micro;
 		}
 		
-		display table type:opengl{
+		display table type:opengl background:#white draw_env:false camera_pos: {216.5723,218.6043,128.4638} camera_look_pos: {185.83,24.5045,-36.4296} camera_up_vector: {-0.1006,0.6349,0.7661}
+		{
 			species macroCell aspect:macro;
-			species mesoCell aspect:meso position:{world.shape.width*1.25,0};
+			species mesoCell aspect:mesoTable;
+			species microCell aspect:microTable;
+			graphics 'table'{
+				draw box(100,100,25) color:#black at:{50,50,-26} empty:true;
+				draw box(100,100,25) color:#black at:{175,50,-26} empty:true;
+				draw box(100,100,25) color:#black at:{300,50,-26} empty:true;
+			}
 		}
 		
 	}
