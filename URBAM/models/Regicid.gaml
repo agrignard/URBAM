@@ -158,7 +158,6 @@ species macroCell parent: cells{
 	}
 	
 	action saveState{
-		
 	}
 	
 	action modifyToCity{
@@ -178,6 +177,13 @@ species macroCell parent: cells{
 species mesoCell parent:cells{
 	
 	user_command "generate Micro"action: generateMicro;
+	user_command "save Macro State"action: saveMacroState;
+	user_command "Residential"action: modifyToResidential;
+	user_command "Commercial"action: modifyToCommercial;
+	user_command "Industrial"action: modifyToIndustrial;
+	user_command "Educational"action: modifyToEducational;
+	user_command "Park"action: modifyToPark;
+	user_command "Lake"action: modifyToLake;
 	action generateMicro{
 		currentMeso<-self;
 		ask microCell{
@@ -197,7 +203,34 @@ species mesoCell parent:cells{
 		}	
 	}
 	
-		string affectMicroCellType {
+	action saveMacroState{
+		ask macroCell(currentMacro){
+			do saveState;
+		}
+	}
+	action saveState{
+		
+	}
+	action modifyToResidential{
+		type<-mesoCellsTypes[0];
+	}
+	action modifyToCommercial{
+		type<-mesoCellsTypes[1];
+	}
+	action modifyToIndustrial{
+		type<-macroCellsTypes[2];
+	}
+	action modifyToEducational{
+		type<-macroCellsTypes[3];
+	}
+	action modifyToPark{
+		type<-macroCellsTypes[4];
+	}
+	action modifyToLake{
+		type<-macroCellsTypes[5];
+	}
+	
+	string affectMicroCellType {
 		int total <- sum(mesoCellsProportions[type]);
 		int index <- rand(total);
 		int cumul <- mesoCellsProportions[type][0];
@@ -211,6 +244,36 @@ species mesoCell parent:cells{
 }
 
 species microCell parent:cells{
+	user_command "save Meso State"action: saveMesoState;
+	user_command "Residential"action: modifyToResidential;
+	user_command "Commercial"action: modifyToCommercial;
+	user_command "Industrial"action: modifyToIndustrial;
+	user_command "Educational"action: modifyToEducational;
+	user_command "Park"action: modifyToPark;
+	user_command "Lake"action: modifyToLake;
+	action saveMesoState{
+		ask mesoCell(currentMeso){
+			do saveState;
+		}
+	}
+	action modifyToResidential{
+		type<-mesoCellsTypes[0];
+	}
+	action modifyToCommercial{
+		type<-mesoCellsTypes[1];
+	}
+	action modifyToIndustrial{
+		type<-macroCellsTypes[2];
+	}
+	action modifyToEducational{
+		type<-macroCellsTypes[3];
+	}
+	action modifyToPark{
+		type<-macroCellsTypes[4];
+	}
+	action modifyToLake{
+		type<-macroCellsTypes[5];
+	}
 	
 }
 
@@ -232,8 +295,8 @@ experiment REGICID{
 		layout #split;
 		display macro type:opengl{
 			species macroCell aspect:macro;
-			species mesoCell aspect:meso;
-			species microCell aspect:micro;
+			//species mesoCell aspect:meso;
+			//species microCell aspect:micro;
 			event mouse_down action: activateMacro; 
 		}
 		display meso type:opengl  camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/3} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
