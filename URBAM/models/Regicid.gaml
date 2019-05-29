@@ -31,7 +31,8 @@ global{
 	
 	
 	init{
-		do load_macro_grid("./../includes/Macro_Grid.csv");
+		do createRandomGrid;
+		//do load_macro_grid("./../includes/Macro_Grid.csv");
 		currentMacro<- one_of(macroCell);
 		currentMeso<- one_of(macroCell);
 	}
@@ -51,7 +52,7 @@ global{
 		}
 	}
 	
-	action createRandomGrid(string path_to_file) {
+	action createRandomGrid {
 		loop i from: 0 to: nbCells-1{
 			loop j from:0 to:nbCells-1{
 				create macroCell{
