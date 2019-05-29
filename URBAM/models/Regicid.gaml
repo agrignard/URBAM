@@ -218,16 +218,16 @@ species mesoCell parent:cells{
 		type<-mesoCellsTypes[1];
 	}
 	action modifyToIndustrial{
-		type<-macroCellsTypes[2];
+		type<-mesoCellsTypes[2];
 	}
 	action modifyToEducational{
-		type<-macroCellsTypes[3];
+		type<-mesoCellsTypes[3];
 	}
 	action modifyToPark{
-		type<-macroCellsTypes[4];
+		type<-mesoCellsTypes[4];
 	}
 	action modifyToLake{
-		type<-macroCellsTypes[5];
+		type<-mesoCellsTypes[5];
 	}
 	
 	string affectMicroCellType {
@@ -257,22 +257,22 @@ species microCell parent:cells{
 		}
 	}
 	action modifyToResidential{
-		type<-mesoCellsTypes[0];
+		type<-microCellsTypes[0];
 	}
 	action modifyToCommercial{
-		type<-mesoCellsTypes[1];
+		type<-microCellsTypes[1];
 	}
 	action modifyToIndustrial{
-		type<-macroCellsTypes[2];
+		type<-microCellsTypes[2];
 	}
 	action modifyToEducational{
-		type<-macroCellsTypes[3];
+		type<-microCellsTypes[3];
 	}
 	action modifyToPark{
-		type<-macroCellsTypes[4];
+		type<-microCellsTypes[4];
 	}
 	action modifyToLake{
-		type<-macroCellsTypes[5];
+		type<-microCellsTypes[5];
 	}
 	
 }
