@@ -118,6 +118,11 @@ species connection{
 
 species macroCell parent: cells{
 	user_command "generate Meso"action: generateMeso;
+	user_command "save State"action: saveState;
+	user_command "City"action: modifyToCity;
+	user_command "Village"action: modifyToVillage;
+	user_command "Park"action: modifyToPark;
+	user_command "Lake"action: modifyToLake;
 	action generateMeso{
 		currentMacro<-self;
 		ask mesoCell{
@@ -132,7 +137,6 @@ species macroCell parent: cells{
 				create mesoCell{
 					size<-myself.size/nbCells;
 					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
-					//type <- mesoCellsTypes[myself.rand(length(mesoCellsTypes))];
 					type <- myself.affectMesoCellType();
 					seed <- float(myself.rand(1000000));
 				}
@@ -150,6 +154,23 @@ species macroCell parent: cells{
 			cumul <- cumul + macroCellsProportions[type][currentType]; 
 		}
 		return mesoCellsTypes[currentType];
+	}
+	
+	action saveState{
+		
+	}
+	
+	action modifyToCity{
+		type<-macroCellsTypes[0];
+	}
+	action modifyToVillage{
+		type<-macroCellsTypes[1];
+	}
+	action modifyToPark{
+		type<-macroCellsTypes[2];
+	}
+	action modifyToLake{
+		type<-macroCellsTypes[3];
 	}
 }
 
