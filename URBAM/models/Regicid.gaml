@@ -309,6 +309,11 @@ experiment REGICID{
 			species microCell aspect:micro;
 		}
 		
+		display table type:opengl{
+			species macroCell aspect:macro;
+			species mesoCell aspect:meso position:{world.shape.width*1.25,0};
+		}
+		
 	}
 	
 }
