@@ -13,8 +13,8 @@ global{
 	cell_macro currentMacro;
 	cell_meso currentMeso;
 	
-	int macro_grid_width <- 6;
-	int macro_grid_height <- 6;
+	int macro_grid_width <- 12;
+	int macro_grid_height <- 12;
 	int meso_grid_width <- 8;
 	int meso_grid_height <- 8;
 	int micro_grid_width <- 10;
@@ -124,9 +124,9 @@ species road {
 	}
 }
 
-grid cell_micro  width: 10 height: 10 ;
+grid cell_micro  width: micro_grid_width height: micro_grid_height ;
 
-grid cell_meso  width: 8 height: 8 {
+grid cell_meso  width: meso_grid_width height: meso_grid_height {
 	list<list<int, string>> micro_cells;
 	aspect is_selected {
 		if (currentMeso = self) {
@@ -135,7 +135,7 @@ grid cell_meso  width: 8 height: 8 {
 	}
 }
 
-grid cell_macro width: 6 height: 6 {
+grid cell_macro width: macro_grid_width height: macro_grid_height {
 	string type;
 	list<string> meso_cells;
 	aspect is_selected {
