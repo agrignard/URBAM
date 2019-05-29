@@ -150,7 +150,7 @@ species macroCell parent: cells{
 		int index <- rand(total);
 		int cumul <- macroCellsProportions[type][0];
 		int currentType <- 0;
-		loop  while: (index>cumul) {
+		loop  while: (index >= cumul) {
 			currentType <- currentType + 1;
 			cumul <- cumul + macroCellsProportions[type][currentType]; 
 		}
@@ -158,6 +158,11 @@ species macroCell parent: cells{
 	}
 	
 	action saveState{
+		list<int> newProportions <- [];
+		loop mesoType over: mesoCellsTypes{
+			newProportions << (mesoCell count (each.type = mesoType));
+		}
+		put newProportions at: currentMacro.type in: macroCellsProportions;
 	}
 	
 	action modifyToCity{
@@ -209,7 +214,11 @@ species mesoCell parent:cells{
 		}
 	}
 	action saveState{
-		
+		list<int> newProportions <- [];
+		loop microType over: microCellsTypes{
+			newProportions << (microCell count (each.type = microType));
+		}
+		put newProportions at: currentMeso.type in: mesoCellsProportions;
 	}
 	action modifyToResidential{
 		type<-mesoCellsTypes[0];
@@ -218,16 +227,16 @@ species mesoCell parent:cells{
 		type<-mesoCellsTypes[1];
 	}
 	action modifyToIndustrial{
-		type<-macroCellsTypes[2];
+		type<-mesoCellsTypes[2];
 	}
 	action modifyToEducational{
-		type<-macroCellsTypes[3];
+		type<-mesoCellsTypes[3];
 	}
 	action modifyToPark{
-		type<-macroCellsTypes[4];
+		type<-mesoCellsTypes[4];
 	}
 	action modifyToLake{
-		type<-macroCellsTypes[5];
+		type<-mesoCellsTypes[5];
 	}
 	
 	string affectMicroCellType {
@@ -235,7 +244,7 @@ species mesoCell parent:cells{
 		int index <- rand(total);
 		int cumul <- mesoCellsProportions[type][0];
 		int currentType <- 0;
-		loop  while: (index>cumul) {
+		loop  while: (index >= cumul) {
 			currentType <- currentType + 1;
 			cumul <- cumul + mesoCellsProportions[type][currentType]; 
 		}
@@ -301,7 +310,7 @@ experiment REGICID{
 		}
 		display meso type:opengl  camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/3} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
-			species microCell aspect:micro; 
+	//		species microCell aspect:micro; 
 			event mouse_down action: activateMeso; 			
 		}
 
