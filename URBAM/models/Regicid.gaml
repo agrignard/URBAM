@@ -80,11 +80,14 @@ global{
 }
 
 species cells{
+	int level;
 	string type; 
 	float seed;
 	float size;
 	cells currentSelectedCell;
-	list<float> seedList;
+	changeLog log;
+	cells parentCell;
+	
 	//for RNG
 	float value;
 
@@ -97,6 +100,27 @@ species cells{
 	action reset_RNG{
 		value <- seed;
 	}
+	
+	init{
+		create changeLog{
+			self.c <- myself;
+			myself.log <- self;
+		}
+	}
+	
+	action populateParentChangeLog{
+		
+	}
+	
+	action clean{
+		
+		// a ecrire demain pour cleaner les logs
+//		if (parentCell != nil) and !(parentCell.log.childrenLogs.values contains log){
+////			ask log {do die;}
+//		}
+		do die;
+	}
+
 	
 	aspect macro{
 		draw square(size) color: macroCellsColors[type] border:#gamablue-25;
@@ -118,19 +142,23 @@ species connection{
 }
 
 species macroCell parent: cells{
+	int level <- 0;
 	user_command "generate Meso"action: generateMeso;
 	user_command "save State"action: saveState;
 	user_command "City"action: modifyToCity;
 	user_command "Village"action: modifyToVillage;
 	user_command "Park"action: modifyToPark;
 	user_command "Lake"action: modifyToLake;
+	
 	action generateMeso{
 		currentMacro<-self;
 		ask mesoCell{
-			do die;
+//			ask log {do die;}
+			do clean;
 		}
 		ask microCell{
-			do die;
+//			ask log {do die;}
+			do clean;
 		}
 		do reset_RNG;
 		loop i from: 0 to: nbCells-1{
@@ -139,9 +167,22 @@ species macroCell parent: cells{
 					size<-myself.size/nbCells;
 					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
 					type <- myself.affectMesoCellType();
+					parentCell <- myself;
 					seed <- float(myself.rand(1000000));
 				}
 			}
+		}
+		do applyChanges;
+	}
+	
+	action applyChanges{
+		loop k over: log.mainLog.keys{
+			mesoCell cell <- first(mesoCell where (int(each)-int(first(mesoCell))= k));
+			cell.type <- log.mainLog[k];
+		}
+		loop k over: log.childrenLogs.keys{
+			mesoCell cell <- first(mesoCell where (int(each)-int(first(mesoCell))= k));
+			cell.log <- log.childrenLogs[k];
 		}
 	}
 	
@@ -180,6 +221,7 @@ species macroCell parent: cells{
 }
 
 species mesoCell parent:cells{
+	int level <- 1;
 	
 	user_command "generate Micro"action: generateMicro;
 	user_command "save Macro State"action: saveMacroState;
@@ -189,10 +231,20 @@ species mesoCell parent:cells{
 	user_command "Educational"action: modifyToEducational;
 	user_command "Park"action: modifyToPark;
 	user_command "Lake"action: modifyToLake;
+	
+	user_command "Local Residential"action: localModifyToResidential;
+	user_command "Local Commercial"action: localModifyToCommercial;
+	user_command "Local Industrial"action: localModifyToIndustrial;
+	user_command "Local Educational"action: localModifyToEducational;
+	user_command "Local Park"action: localModifyToPark;
+	user_command "Local Lake"action: localModifyToLake;
+	
+	macroCell parentCell;
+	
 	action generateMicro{
 		currentMeso<-self;
 		ask microCell{
-			do die;
+			do clean;
 		}
 		do reset_RNG;
 		loop i from: 0 to: nbCells-1{
@@ -200,16 +252,24 @@ species mesoCell parent:cells{
 				create microCell{
 					size<-myself.size/nbCells;
 					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
-					//type <- microCellsTypes[myself.rand(length(microCellsTypes))];
 					type <- myself.affectMicroCellType();
+					parentCell <- myself;	
 					seed <- float(myself.rand(1000000));
 				}
 			}
-		}	
+		}
+		do applyChanges;
+	}
+
+	action applyChanges{
+		loop k over: log.mainLog.keys{
+			microCell cell <- first(microCell where (int(each)-int(first(microCell))= k));
+			cell.type <- log.mainLog[k];
+		}
 	}
 	
 	action saveMacroState{
-		ask macroCell(currentMacro){
+		ask parentCell{
 			do saveState;
 		}
 	}
@@ -239,6 +299,43 @@ species mesoCell parent:cells{
 		type<-mesoCellsTypes[5];
 	}
 	
+	action localModifyToResidential{
+		type<-mesoCellsTypes[0];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		}
+	}
+	action localModifyToCommercial{
+		type<-mesoCellsTypes[1];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		}
+	}
+	action localModifyToIndustrial{
+		type<-mesoCellsTypes[2];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		}
+	}
+	action localModifyToEducational{
+		type<-mesoCellsTypes[3];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		}
+	}
+	action localModifyToPark{
+		type<-mesoCellsTypes[4];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		}
+	}
+	action localModifyToLake{
+		type<-mesoCellsTypes[5];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		}
+	}
+	
 	string affectMicroCellType {
 		int total <- sum(mesoCellsProportions[type]);
 		int index <- rand(total);
@@ -250,9 +347,16 @@ species mesoCell parent:cells{
 		}
 		return microCellsTypes[currentType];
 	}
+	
+	action populateParentChangeLog{
+		int index <- int(self) - int(first(mesoCell));
+		add log at: index to: parentCell.log.childrenLogs; 
+	}
 }
 
 species microCell parent:cells{
+	int level <- 3;
+	
 	user_command "save Meso State"action: saveMesoState;
 	user_command "Residential"action: modifyToResidential;
 	user_command "Commercial"action: modifyToCommercial;
@@ -260,8 +364,18 @@ species microCell parent:cells{
 	user_command "Educational"action: modifyToEducational;
 	user_command "Park"action: modifyToPark;
 	user_command "Lake"action: modifyToLake;
+	
+	user_command "Local Residential"action: localModifyToResidential;
+	user_command "Local Commercial"action: localModifyToCommercial;
+	user_command "Local Industrial"action: localModifyToIndustrial;
+	user_command "Local Educational"action: localModifyToEducational;
+	user_command "Local Park"action: localModifyToPark;
+	user_command "Local Lake"action: localModifyToLake;
+	
+	mesoCell parentCell;
+	
 	action saveMesoState{
-		ask mesoCell(currentMeso){
+		ask parentCell{
 			do saveState;
 		}
 	}
@@ -284,6 +398,54 @@ species microCell parent:cells{
 		type<-microCellsTypes[5];
 	}
 	
+	action localModifyToResidential{
+		type<-microCellsTypes[0];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		}
+	}
+	action localModifyToCommercial{
+		type<-microCellsTypes[1];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		}
+	}
+	action localModifyToIndustrial{
+		type<-microCellsTypes[2];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		}
+	}
+	action localModifyToEducational{
+		type<-microCellsTypes[3];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		}
+	}
+	action localModifyToPark{
+		type<-microCellsTypes[4];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		}
+	}
+	action localModifyToLake{
+		type<-microCellsTypes[5];
+		ask parentCell.log {
+			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		}
+	}
+	
+}
+
+species changeLog{
+	map<int, string> mainLog <- [];
+	map<int, changeLog> childrenLogs <- [];
+	cells c;
+	
+	action addToLog(int i, string type){
+		add type at: i to: mainLog;
+		ask c {do populateParentChangeLog;}
+	}
 }
 
 species macroConnection parent: connection{
