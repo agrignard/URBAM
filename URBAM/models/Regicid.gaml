@@ -10,7 +10,7 @@ model Regicid
 /* Insert your model definition here */
 
 global{
-	int nbCells<-10;
+	int nbCells<-25;
 	cells currentMacro;
 	cells currentMeso;
 	list<string> macroCellsTypes <- ["City", "Village", "Park","Lake"];
@@ -48,10 +48,17 @@ global{
 					location<-{size*i+size/2,size*j+size/2};
 					seed <- float(rnd(1000000));
 					type <- string(data[i, j]);
-					density<-rnd(10);
+					density<-rand(10);
+					write "la mouche";
+					write "zob" + rand(10); 
+					write "la mouchezzzzz";
 				}
 			}
 		}
+		ask macroCell{
+		write "zobi" + rand(10); 	
+		}
+		
 	}
 	
 	action createRandomGrid {
@@ -62,7 +69,7 @@ global{
 					location<-{size*i+size/2,size*j+size/2};
 					seed <- float(rnd(1000000));
 					type <- one_of(macroCellsTypes);
-					density<-rnd(10);
+					density<-rand(10);
 				}
 			}
 		}
@@ -152,7 +159,7 @@ species macroCell parent: cells{
 					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
 					type <- myself.affectMesoCellType();
 					seed <- float(myself.rand(1000000));
-					density<-rnd(10);
+					density<-rand(10);
 				}
 			}
 		}
@@ -166,7 +173,7 @@ species macroCell parent: cells{
 		int index <- rand(total);
 		int cumul <- macroCellsProportions[type][0];
 		int currentType <- 0;
-		loop  while: (index>cumul) {
+		loop  while: (index >= cumul) {
 			currentType <- currentType + 1;
 			cumul <- cumul + macroCellsProportions[type][currentType]; 
 		}
@@ -174,6 +181,11 @@ species macroCell parent: cells{
 	}
 	
 	action saveState{
+		list<int> newProportions <- [];
+		loop mesoType over: mesoCellsTypes{
+			newProportions << (mesoCell count (each.type = mesoType));
+		}
+		put newProportions at: currentMacro.type in: macroCellsProportions;
 	}
 	
 	action modifyToCity{
@@ -218,7 +230,7 @@ species mesoCell parent:cells{
 					//type <- microCellsTypes[myself.rand(length(microCellsTypes))];
 					type <- myself.affectMicroCellType();
 					seed <- float(myself.rand(1000000));
-					density<-rnd(10);
+					density<-rand(10);
 				}
 			}
 		}	
@@ -230,7 +242,11 @@ species mesoCell parent:cells{
 		}
 	}
 	action saveState{
-		
+		list<int> newProportions <- [];
+		loop microType over: microCellsTypes{
+			newProportions << (microCell count (each.type = microType));
+		}
+		put newProportions at: currentMeso.type in: mesoCellsProportions;
 	}
 	action modifyToResidential{
 		type<-mesoCellsTypes[0];
@@ -262,7 +278,7 @@ species mesoCell parent:cells{
 		int index <- rand(total);
 		int cumul <- mesoCellsProportions[type][0];
 		int currentType <- 0;
-		loop  while: (index>cumul) {
+		loop  while: (index >= cumul) {
 			currentType <- currentType + 1;
 			cumul <- cumul + mesoCellsProportions[type][currentType]; 
 		}
@@ -320,7 +336,8 @@ species microConnection parent: connection{
 experiment REGICID{
 	output{
 		//layout #split;
-		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
+		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  ;
+		//editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
 		display macro type:opengl draw_env:false{
 			species macroCell aspect:macro;
 			//species mesoCell aspect:meso;
@@ -330,6 +347,7 @@ experiment REGICID{
 		display meso type:opengl  draw_env:false camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCells*0.8)} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
 			//species microCell aspect:micro; 
+        	//species microCell aspect:micro; 
 			event mouse_down action: activateMeso; 			
 		}
 
