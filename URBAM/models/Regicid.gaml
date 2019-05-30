@@ -127,6 +127,11 @@ species cells{
 //		if (parentCell != nil) and !(parentCell.log.childrenLogs.values contains log){
 ////			ask log {do die;}
 //		}
+		if length(log.mainLog) = 0 and length(log.childrenLogs) = 0 {
+			ask log {
+				do die;
+			}
+		}
 		do die;
 	}
 
@@ -503,8 +508,8 @@ species microConnection parent: connection{
 experiment REGICID{
 	output{
 		//layout #split;
-		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  
-		editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
+		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  ;
+	//	editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
 		display macro type:opengl draw_env:true{
 			species macroCell aspect:macro;
 			//species mesoCell aspect:meso;
