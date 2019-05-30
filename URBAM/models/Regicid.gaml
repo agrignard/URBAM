@@ -97,6 +97,7 @@ species cells{
 	cells currentSelectedCell;
 	changeLog log;
 	cells parentCell;
+	map<list<int>,string> changeLog2 <- [];
 	
 	//for RNG
 	float value;
@@ -125,14 +126,16 @@ species cells{
 		}
 	}
 	
-	action addToLog(int i, string s){
+	action addToLog(string s){
 		if log = nil{
 			create changeLog{
 				myself.log <- self;
 			}
 		}
-		add s at: i to: log.mainLog;
+		add s at: index to: log.mainLog;
 		do populateParentChangeLog;
+		
+
 	}
 	
 	
@@ -359,37 +362,37 @@ species mesoCell parent:cells{
 	action localModifyToResidential{
 		type<-mesoCellsTypes[0];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToCommercial{
 		type<-mesoCellsTypes[1];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToIndustrial{
 		type<-mesoCellsTypes[2];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToEducational{
 		type<-mesoCellsTypes[3];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToPark{
 		type<-mesoCellsTypes[4];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToLake{
 		type<-mesoCellsTypes[5];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	
@@ -454,37 +457,37 @@ species microCell parent:cells{
 	action localModifyToResidential{
 		type<-microCellsTypes[0];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToCommercial{
 		type<-microCellsTypes[1];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToIndustrial{
 		type<-microCellsTypes[2];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToEducational{
 		type<-microCellsTypes[3];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToPark{
 		type<-microCellsTypes[4];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToLake{
 		type<-microCellsTypes[5];
 		ask parentCell {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+			do addToLog(myself.type);
 		}
 	}
 	
