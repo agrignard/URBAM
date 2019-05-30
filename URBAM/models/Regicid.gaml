@@ -10,7 +10,10 @@ model Regicid
 /* Insert your model definition here */
 
 global{
-	int nbCells<-25;
+	int nbCellsWidth<-10;
+	int nbCellsHeight<-10;
+	float macroCellWidth<-100#m;
+	float macroCellHeight<-100#m;
 	cells currentMacro;
 	cells currentMeso;
 	list<string> macroCellsTypes <- ["City", "Village", "Park","Lake"];
@@ -29,7 +32,7 @@ global{
 	float a <- 25214903917.0;
 	float c <- 11.0;
 	float m <- 2^48;
-	
+	geometry shape <-rectangle(nbCellsWidth*macroCellWidth, nbCellsHeight*macroCellHeight);
 	
 	init{
 		do createRandomGrid;
@@ -44,32 +47,27 @@ global{
 		loop i from: 0 to: data.rows - 1 {
 			loop j from: 0 to: data.columns - 1 {
 					create macroCell{
-					size<-world.shape.width/nbCells;
-					location<-{size*i+size/2,size*j+size/2};
+					width<-macroCellWidth;
+					height<-macroCellHeight;
+					location<-{width*i+width/2,height*j+height/2};
 					seed <- float(rnd(1000000));
 					type <- string(data[i, j]);
-					density<-rand(10);
-					write "la mouche";
-					write "zob" + rand(10); 
-					write "la mouchezzzzz";
+					density<-rnd(10);
 				}
 			}
-		}
-		ask macroCell{
-		write "zobi" + rand(10); 	
-		}
-		
+		}	
 	}
 	
 	action createRandomGrid {
-		loop i from: 0 to: nbCells-1{
-			loop j from:0 to:nbCells-1{
+		loop i from: 0 to: nbCellsWidth-1{
+			loop j from:0 to:nbCellsHeight-1{
 				create macroCell{
-					size<-world.shape.width/nbCells;
-					location<-{size*i+size/2,size*j+size/2};
+					width<-macroCellWidth;
+					height<-macroCellHeight;
+					location<-{width*i+width/2,height*j+height/2};
 					seed <- float(rnd(1000000));
 					type <- one_of(macroCellsTypes);
-					density<-rand(10);
+					density<-rnd(10);
 				}
 			}
 		}
@@ -91,7 +89,8 @@ global{
 species cells{
 	string type; 
 	float seed;
-	float size;
+	float width;
+	float height;
 	int density;
 	cells currentSelectedCell;
 	list<float> seedList;
@@ -109,23 +108,27 @@ species cells{
 	}
 	
 	aspect macro{
-		draw square(size) color: macroCellsColors[type] border:#black;
+		draw rectangle(width,height) color: macroCellsColors[type] border:#black;
 	}
 	
 	aspect meso{
-		draw square(size) color:mesoCellsColors[type] border:#black;
+		draw rectangle(width,height) color:mesoCellsColors[type] border:#black;
 	}
 	
 	aspect micro{
-		draw square(size) color: microCellsColors[type] border:#black;
+		draw rectangle(width,height) color: microCellsColors[type] border:#black;
+	}
+	
+	aspect macroTable{
+		draw rectangle(width,height) depth:density color:macroCellsColors[type] border:macroCellsColors[type]+25;
 	}
 	
 	aspect mesoTable{
-		draw square(size*nbCells) depth:density color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{175+(location.x-currentMacro.location.x)*nbCells,world.shape.height/2+(location.y-currentMacro.location.y)*nbCells};
+		draw rectangle(width*nbCellsWidth,height*nbCellsHeight) depth:density color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight};
 	}
 
 	aspect microTable{
-		draw square(size*nbCells*nbCells) depth:density color:microCellsColors[type] border:microCellsColors[type]-25 at:{300+(location.x-currentMeso.location.x)*nbCells*nbCells,world.shape.height/2+(location.y-currentMeso.location.y)*nbCells*nbCells};
+		draw rectangle(width*nbCellsWidth*nbCellsWidth,height*nbCellsHeight*nbCellsHeight) depth:density color:microCellsColors[type] border:microCellsColors[type]-25 at:{world.shape.width*3.5+(location.x-currentMeso.location.x)*nbCellsWidth*nbCellsWidth,world.shape.height/2+(location.y-currentMeso.location.y)*nbCellsHeight*nbCellsHeight};
 	}
 	
 }
@@ -152,14 +155,17 @@ species macroCell parent: cells{
 			do die;
 		}
 		do reset_RNG;
-		loop i from: 0 to: nbCells-1{
-			loop j from:0 to:nbCells-1{
+		loop i from: 0 to: nbCellsWidth-1{
+			loop j from:0 to:nbCellsHeight-1{
 				create mesoCell{
-					size<-myself.size/nbCells;
-					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
+					//size<-myself.size/nbCells;
+					width<-myself.width/nbCellsWidth;
+					height<-myself.height/nbCellsWidth;
+					location<-{myself.location.x-myself.width/2+width*i+width/2,myself.location.y-myself.height/2+height*j+height/2};
+					//location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
 					type <- myself.affectMesoCellType();
 					seed <- float(myself.rand(1000000));
-					density<-rand(10);
+					density<-rnd(10);
 				}
 			}
 		}
@@ -222,15 +228,18 @@ species mesoCell parent:cells{
 			do die;
 		}
 		do reset_RNG;
-		loop i from: 0 to: nbCells-1{
-			loop j from:0 to:nbCells-1{
+		loop i from: 0 to: nbCellsWidth-1{
+			loop j from:0 to:nbCellsHeight-1{
 				create microCell{
-					size<-myself.size/nbCells;
-					location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
+					//size<-myself.size/nbCells;
+					width<-myself.width/nbCellsWidth;
+					height<-myself.height/nbCellsWidth;
+					location<-{myself.location.x-myself.width/2+width*i+width/2,myself.location.y-myself.height/2+height*j+height/2};
+					//location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
 					//type <- microCellsTypes[myself.rand(length(microCellsTypes))];
 					type <- myself.affectMicroCellType();
 					seed <- float(myself.rand(1000000));
-					density<-rand(10);
+					density<-rnd(10);
 				}
 			}
 		}	
@@ -336,34 +345,34 @@ species microConnection parent: connection{
 experiment REGICID{
 	output{
 		//layout #split;
-		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  ;
-		//editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
-		display macro type:opengl draw_env:false{
+		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  
+		editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
+		display macro type:opengl draw_env:true{
 			species macroCell aspect:macro;
 			//species mesoCell aspect:meso;
 			//species microCell aspect:micro;
 			event mouse_down action: activateMacro; 
 		}
-		display meso type:opengl  draw_env:false camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCells*0.8)} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display meso type:opengl  draw_env:false camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
 			//species microCell aspect:micro; 
         	//species microCell aspect:micro; 
 			event mouse_down action: activateMeso; 			
 		}
 
-		display micro type:opengl draw_env:false camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCells*0.8)*(nbCells*0.8))} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display micro type:opengl draw_env:false camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species microCell aspect:micro;
 		}
 		
-		display table type:opengl background:#white draw_env:false camera_pos: {216.5723,218.6043,128.4638} camera_look_pos: {185.83,24.5045,-36.4296} camera_up_vector: {-0.1006,0.6349,0.7661}
+		display table type:opengl background:#white draw_env:true
 		{
-			species macroCell aspect:macro;
+			species macroCell aspect:macroTable;
 			species mesoCell aspect:mesoTable;
 			species microCell aspect:microTable;
 			graphics 'table'{
-				draw box(100,100,25) color:#black at:{50,50,-26} empty:true;
-				draw box(100,100,25) color:#black at:{175,50,-26} empty:true;
-				draw box(100,100,25) color:#black at:{300,50,-26} empty:true;
+				draw box(nbCellsWidth*macroCellWidth,nbCellsHeight*macroCellHeight,world.shape.width*0.25) color:#black at:{world.shape.width/2,world.shape.height/2,-world.shape.width*0.26} empty:true;
+				draw box(nbCellsWidth*macroCellWidth,nbCellsHeight*macroCellHeight,world.shape.width*0.25) color:#black at:{world.shape.width*2,world.shape.height/2,-world.shape.width*0.26} empty:true;
+				draw box(nbCellsWidth*macroCellWidth,nbCellsHeight*macroCellHeight,world.shape.width*0.25) color:#black at:{world.shape.width*3.5,world.shape.height/2,-world.shape.width*0.26} empty:true;
 			}
 		}
 		
