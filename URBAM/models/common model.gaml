@@ -29,7 +29,7 @@ global{
 	
 	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)","hide"];
 	
-	int global_people_size <-50;
+	int global_people_size <-100;
 	
 	list<basic_people> list_of_people;
 	
@@ -120,7 +120,7 @@ global{
 	}
 	
 		
-	reflex update_graph when: every(3 #cycle) {
+	reflex update_graph when: every(3 #cycle) and not empty(road){
 		map<road,float> weights <- traffic_jam ? road as_map (each::(each.shape.perimeter)) : road as_map (each::(each.shape.perimeter * (min([10,1/exp(-each.nb_people/road_capacity)]))));
 		graph_per_mode["car"] <- graph_per_mode["car"] with_weights weights;
 	}
@@ -129,7 +129,7 @@ global{
 	reflex compute_traffic_density{
 		ask road {traffic_density <- ["car"::[0::0,1::0], "bike"::[0::0,1::0], "walk"::[0::0,1::0], "pev"::[0::0,1::0]];}
 
-		ask list_of_people{
+		ask list_of_people where not dead(each){
 			if current_path != nil and current_path.edges != nil{
 				ask list<road>(current_path.edges){
 					traffic_density[myself.mobility_mode][myself.heading_index]  <- traffic_density[myself.mobility_mode][myself.heading_index] + 1;
@@ -326,12 +326,12 @@ species basic_people skills: [moving]{
 	}
 	
 	action register {
-		if ((mobility_mode = "car") and current_edge != nil) {
+		if ((mobility_mode = "car") and current_edge != nil and not dead(road(current_edge))) {
 			road(current_edge).nb_people <- road(current_edge).nb_people + 1;
 		}
 	}
 	action unregister {
-		if ((mobility_mode = "car") and current_edge != nil) {
+		if ((mobility_mode = "car") and current_edge != nil and not dead(road(current_edge))) {
 			road(current_edge).nb_people <- road(current_edge).nb_people - 1;
 		}
 	}

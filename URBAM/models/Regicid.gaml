@@ -9,13 +9,20 @@ model Regicid
 
 /* Insert your model definition here */
 
+import "common model.gaml"
 global{
 	int nbCellsWidth<-10;
 	int nbCellsHeight<-10;
-	float macroCellWidth<-100#m;
-	float macroCellHeight<-100#m;
+	float macroCellWidth<-100#km;
+	float macroCellHeight<-100#km;
+	
+	int global_people_size <-100;
 	cells currentMacro;
 	cells currentMeso;
+	
+	macroCell currentMacro_tmp;
+	mesoCell currentMeso_tmp;
+	
 	list<string> macroCellsTypes <- ["City", "Village", "Park","Lake"];
 	map<string, rgb> macroCellsColors <- ["City"::#gamaorange, "Village"::#gamared, "Park"::#green,"Lake"::#blue];
 	
@@ -40,6 +47,7 @@ global{
 		do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
 		currentMacro<- one_of(macroCell);
 		currentMeso<- one_of(macroCell);
+		do load_profiles;
 	}
 	
 	action load_macro_grid(string path_to_file) {
@@ -59,6 +67,7 @@ global{
 		}	
 	}
 	
+	
 	action createRandomGrid {
 		loop i from: 0 to: nbCellsWidth-1{
 			loop j from:0 to:nbCellsHeight-1{
@@ -74,20 +83,31 @@ global{
 		}
 	}
 	
-	
+	reflex updateMacroMeso {
+		if (currentMacro != currentMacro_tmp) {
+			ask currentMacro_tmp{
+				do generateMeso;
+			}
+		}
+		if (currentMeso != currentMeso_tmp) {
+			ask currentMeso_tmp{
+				do generateMicro;
+			}
+		}
+	}
 	action activateMacro {
-		macroCell cell <- first(macroCell closest_to (circle(1) at_location #user_location));
-		ask cell {do generateMeso;}
+		currentMacro_tmp <- (macroCell closest_to  #user_location);
+		
 	}	
 	
 	action activateMeso {
-		mesoCell cell <- first(mesoCell closest_to (circle(1) at_location #user_location));
-		ask cell {do generateMicro;}
+		currentMeso_tmp <- (mesoCell closest_to #user_location);
+		
 	}	
 	
 }
 
-species cells{
+species cells parent: poi{
 	int level;
 	int index;
 	string type; 
@@ -150,15 +170,15 @@ species cells{
 	}
 	
 	aspect macro{
-		draw rectangle(width,height) color: macroCellsColors[type] border:#black;
+		draw rectangle(width,height) color: macroCellsColors[type] ;
 	}
 	
 	aspect meso{
-		draw rectangle(width,height) color:mesoCellsColors[type] border:#black;
+		draw rectangle(width,height) color:mesoCellsColors[type];
 	}
 	
 	aspect micro{
-		draw rectangle(width,height) color: microCellsColors[type] border:#black;
+		draw rectangle(width,height) color: microCellsColors[type];
 	}
 	
 	aspect macroTable{
@@ -295,23 +315,57 @@ species mesoCell parent:cells{
 		ask microCell{
 			do clean;
 		}
+		ask people {do die;}
+		ask road {do die;}
 		do reset_RNG;
 		loop i from: 0 to: nbCellsWidth-1{
 			loop j from:0 to:nbCellsHeight-1{
 				create microCell{
 					width<-myself.width/nbCellsWidth;
-					height<-myself.height/nbCellsWidth;
+					height<-myself.height/nbCellsHeight;
 					location<-{myself.location.x-myself.width/2+width*i+width/2,myself.location.y-myself.height/2+height*j+height/2};
 					type <- myself.affectMicroCellType();
 					parentCell <- myself;	
 					seed <- float(myself.rand(1000000));
 					density<-rnd(10);
+					create people number: density with: [location::location]{
+						origin <- myself;
+						list_of_people << self;
+						do reinit_destination;
+						map<profile, float> prof_pro <- proportions_per_bd_type[one_of(proportions_per_bd_type.keys)];
+						my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
+			
+					}
 				}
 			}
 		}
+		do generate_road;
 		do applyChanges;
+		
+		
 	}
 
+	
+	action generate_road {
+		geometry s <- rectangle(width,height);
+		list<geometry> lines;
+		float w <- width/nbCellsWidth;
+		float h <- height/nbCellsHeight;
+		float min_x <- s.points min_of each.x;
+		float min_y <- s.points min_of each.y;
+		loop i from: 0 to: nbCellsWidth {
+				lines << line([{i*w+ min_x,min_y}, {i*w+min_x,height+min_y}]);
+			}
+			loop i from: 0 to: nbCellsHeight {
+				lines << line([{min_x, i*h+min_y}, {width+ min_x,i*h+min_y}]);
+			}
+			create road from: split_lines(lines) {
+				create road with: [shape:: line(reverse(shape.points))];
+			}
+		ask world {do update_graphs;}
+		
+		
+	}
 	action applyChanges{
 		if log != nil{
 			loop k over: log.mainLog.keys{
@@ -429,6 +483,9 @@ species microCell parent:cells{
 	
 	mesoCell parentCell;
 	
+	action initialize {
+		bounds <- rectangle(width,height) ;
+	}
 	action saveMesoState{
 		ask parentCell{
 			do saveState;
@@ -510,28 +567,37 @@ species microConnection parent: connection{
 	
 }
 
-
-experiment REGICID{
+species people parent: basic_people skills: [moving]{
+	action reinit_destination {
+		dest <-one_of(microCell);
+		target <- nil;
+	}
+}
+experiment REGICID autorun: true{
+	float minimum_cycle_duration <- 0.05;
 	output{
 
-		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  
-		editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
+		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  ;
+		//editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
 		
 
 		display macro type:opengl draw_env:true{
 			species macroCell aspect:macro;
 			event mouse_down action: activateMacro; 
 		}
-		display meso type:opengl  draw_env:false camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display meso type:opengl draw_env:false camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
 			event mouse_down action: activateMeso; 			
 		}
 
-		display micro type:opengl draw_env:false camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display micro type:opengl  draw_env:false z_near: world.shape.width / 1000  camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species microCell aspect:micro;
+			species road ;
+			species people;
+			 
 		}
 		
-		display table type:opengl background:#white draw_env:true camera_pos: {1848.6801,2083.7744,2369.1066} camera_look_pos: {1848.6801,547.195,3.0723} camera_up_vector: {0.0,0.8387,0.5447}
+		display table type:opengl background:#white draw_env:true camera_pos: {1848.6801 * 1000,2083.7744 * 1000,2369.1066 * 1000} camera_look_pos: {1848.6801 * 1000,547.195 * 1000,3.0723 * 1000} camera_up_vector: {0.0,0.8387,0.5447}
 		{
 			species macroCell aspect:macroTable;
 			species mesoCell aspect:mesoTable;
