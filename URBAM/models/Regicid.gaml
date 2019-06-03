@@ -33,10 +33,11 @@ global{
 	float c <- 11.0;
 	float m <- 2^48;
 	geometry shape <-rectangle(nbCellsWidth*macroCellWidth, nbCellsHeight*macroCellHeight);
+	file imageRaster <- file('./../images/Kent_Sketches.png');
 	
 	init{
-		do createRandomGrid;
-		//do load_macro_grid("./../includes/Macro_Grid.csv");
+		//do createRandomGrid;
+		do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
 		currentMacro<- one_of(macroCell);
 		currentMeso<- one_of(macroCell);
 	}
@@ -185,11 +186,9 @@ species macroCell parent: cells{
 		loop i from: 0 to: nbCellsWidth-1{
 			loop j from:0 to:nbCellsHeight-1{
 				create mesoCell{
-					//size<-myself.size/nbCells;
 					width<-myself.width/nbCellsWidth;
 					height<-myself.height/nbCellsWidth;
 					location<-{myself.location.x-myself.width/2+width*i+width/2,myself.location.y-myself.height/2+height*j+height/2};
-					//location<-{myself.location.x-myself.size/2+size*i+size/2,myself.location.y-myself.size/2+size*j+size/2};
 					type <- myself.affectMesoCellType();
 					parentCell <- myself;
 					seed <- float(myself.rand(1000000));
@@ -502,19 +501,15 @@ species microConnection parent: connection{
 
 experiment REGICID{
 	output{
-		//layout #split;
 		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  
 		editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
+		
 		display macro type:opengl draw_env:true{
 			species macroCell aspect:macro;
-			//species mesoCell aspect:meso;
-			//species microCell aspect:micro;
 			event mouse_down action: activateMacro; 
 		}
 		display meso type:opengl  draw_env:false camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
-			//species microCell aspect:micro; 
-        	//species microCell aspect:micro; 
 			event mouse_down action: activateMeso; 			
 		}
 
@@ -522,7 +517,7 @@ experiment REGICID{
 			species microCell aspect:micro;
 		}
 		
-		display table type:opengl background:#white draw_env:true
+		display table type:opengl background:#white draw_env:true camera_pos: {1848.6801,2083.7744,2369.1066} camera_look_pos: {1848.6801,547.195,3.0723} camera_up_vector: {0.0,0.8387,0.5447}
 		{
 			species macroCell aspect:macroTable;
 			species mesoCell aspect:mesoTable;
@@ -532,7 +527,12 @@ experiment REGICID{
 				draw box(nbCellsWidth*macroCellWidth,nbCellsHeight*macroCellHeight,world.shape.width*0.25) color:#black at:{world.shape.width*2,world.shape.height/2,-world.shape.width*0.26} empty:true;
 				draw box(nbCellsWidth*macroCellWidth,nbCellsHeight*macroCellHeight,world.shape.width*0.25) color:#black at:{world.shape.width*3.5,world.shape.height/2,-world.shape.width*0.26} empty:true;
 			}
+			graphics "text" {
+				draw imageRaster size: 500 #px at: {world.shape.width, -world.shape.width};
+			}
 		}
+		
+		
 		
 	}
 	
