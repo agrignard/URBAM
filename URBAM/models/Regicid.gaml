@@ -47,7 +47,7 @@ global{
 		matrix data <- matrix(my_csv_file);
 		loop i from: 0 to: data.rows - 1 {
 			loop j from: 0 to: data.columns - 1 {
-					create macroCell{
+				create macroCell{
 					width<-macroCellWidth;
 					height<-macroCellHeight;
 					location<-{width*i+width/2,height*j+height/2};
@@ -89,6 +89,7 @@ global{
 
 species cells{
 	int level;
+	int index;
 	string type; 
 	float seed;
 	float width;
@@ -97,6 +98,7 @@ species cells{
 	cells currentSelectedCell;
 	changeLog log;
 	cells parentCell;
+	map<list<int>,string> changeLog2 <- [];
 	
 	//for RNG
 	float value;
@@ -110,27 +112,42 @@ species cells{
 	action reset_RNG{
 		value <- seed;
 	}
-	
-	init{
-		create changeLog{
-			self.c <- myself;
-			myself.log <- self;
+
+	action populateParentChangeLog{
+		if parentCell != nil{
+			if parentCell.log = nil{
+				create changeLog{
+					myself.parentCell.log <- self;
+				}
+			}
+			add log at: index to: parentCell.log.childrenLogs; 
+			ask parentCell {
+				do populateParentChangeLog;
+			}
 		}
 	}
 	
-	action populateParentChangeLog{
+	action addToLog(string s){
+		if log = nil{
+			create changeLog{
+				myself.log <- self;
+			}
+		}
+		add s at: index to: log.mainLog;
+		do populateParentChangeLog;
 		
+
 	}
 	
+	
 	action clean{
-		
-		// a ecrire demain pour cleaner les logs
-//		if (parentCell != nil) and !(parentCell.log.childrenLogs.values contains log){
-////			ask log {do die;}
-//		}
+		if log != nil and length(log.mainLog) = 0 and length(log.childrenLogs) = 0 {
+			ask log {
+				do die;
+			}
+		}
 		do die;
 	}
-
 	
 	aspect macro{
 		draw rectangle(width,height) color: macroCellsColors[type] border:#black;
@@ -171,15 +188,14 @@ species macroCell parent: cells{
 	user_command "Village"action: modifyToVillage;
 	user_command "Park"action: modifyToPark;
 	user_command "Lake"action: modifyToLake;
+	int index -> int(self) - int(first(macroCell));
 	
 	action generateMeso{
 		currentMacro<-self;
 		ask mesoCell{
-//			ask log {do die;}
 			do clean;
 		}
 		ask microCell{
-//			ask log {do die;}
 			do clean;
 		}
 		do reset_RNG;
@@ -201,28 +217,30 @@ species macroCell parent: cells{
 	}
 	
 	action applyChanges{
-		loop k over: log.mainLog.keys{
-			mesoCell cell <- first(mesoCell where (int(each)-int(first(mesoCell))= k));
-			cell.type <- log.mainLog[k];
-		}
-		loop k over: log.childrenLogs.keys{
-			mesoCell cell <- first(mesoCell where (int(each)-int(first(mesoCell))= k));
-			cell.log <- log.childrenLogs[k];
-
+		if log != nil{
+			loop k over: log.mainLog.keys{
+				mesoCell cell <- first(mesoCell where (int(each)-int(first(mesoCell))= k));
+				cell.type <- log.mainLog[k];
+			}
+			loop k over: log.childrenLogs.keys{
+				mesoCell cell <- first(mesoCell where (int(each)-int(first(mesoCell))= k));
+				cell.log <- log.childrenLogs[k];
+			}
 		}
 	}
 	
 	string affectMesoCellType {
 		int total <- sum(macroCellsProportions[type]);
-		int index <- rand(total);
+		int ind <- rand(total);
 		int cumul <- macroCellsProportions[type][0];
 		int currentType <- 0;
-		loop  while: (index >= cumul) {
+		loop  while: (ind >= cumul) {
 			currentType <- currentType + 1;
 			cumul <- cumul + macroCellsProportions[type][currentType]; 
 		}
 		return mesoCellsTypes[currentType];
 	}
+	
 	
 	action saveState{
 		list<int> newProportions <- [];
@@ -252,6 +270,7 @@ species macroCell parent: cells{
 
 species mesoCell parent:cells{
 	int level <- 1;
+	int index -> int(self) - int(first(mesoCell));
 	
 	user_command "generate Micro"action: generateMicro;
 	user_command "save Macro State"action: saveMacroState;
@@ -294,9 +313,11 @@ species mesoCell parent:cells{
 	}
 
 	action applyChanges{
-		loop k over: log.mainLog.keys{
-			microCell cell <- first(microCell where (int(each)-int(first(microCell))= k));
-			cell.type <- log.mainLog[k];
+		if log != nil{
+			loop k over: log.mainLog.keys{
+				microCell cell <- first(microCell where (int(each)-int(first(microCell))= k));
+				cell.type <- log.mainLog[k];
+			}
 		}
 	}
 	
@@ -339,61 +360,57 @@ species mesoCell parent:cells{
 	
 	action localModifyToResidential{
 		type<-mesoCellsTypes[0];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToCommercial{
 		type<-mesoCellsTypes[1];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToIndustrial{
 		type<-mesoCellsTypes[2];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToEducational{
 		type<-mesoCellsTypes[3];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToPark{
 		type<-mesoCellsTypes[4];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToLake{
 		type<-mesoCellsTypes[5];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(mesoCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	
 	string affectMicroCellType {
 		int total <- sum(mesoCellsProportions[type]);
-		int index <- rand(total);
+		int ind <- rand(total);
 		int cumul <- mesoCellsProportions[type][0];
 		int currentType <- 0;
-		loop  while: (index >= cumul) {
+		loop  while: (ind >= cumul) {
 			currentType <- currentType + 1;
 			cumul <- cumul + mesoCellsProportions[type][currentType]; 
 		}
 		return microCellsTypes[currentType];
 	}
-	
-	action populateParentChangeLog{
-		int index <- int(self) - int(first(mesoCell));
-		add log at: index to: parentCell.log.childrenLogs; 
-	}
 }
 
 species microCell parent:cells{
 	int level <- 3;
+	int index -> int(self) - int(first(microCell));
 	
 	user_command "save Meso State"action: saveMesoState;
 	user_command "Residential"action: modifyToResidential;
@@ -438,38 +455,38 @@ species microCell parent:cells{
 	
 	action localModifyToResidential{
 		type<-microCellsTypes[0];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToCommercial{
 		type<-microCellsTypes[1];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToIndustrial{
 		type<-microCellsTypes[2];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToEducational{
 		type<-microCellsTypes[3];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToPark{
 		type<-microCellsTypes[4];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	action localModifyToLake{
 		type<-microCellsTypes[5];
-		ask parentCell.log {
-			do addToLog(int(myself)-int(first(microCell)), myself.type);
+		ask parentCell {
+			do addToLog(myself.type);
 		}
 	}
 	
@@ -478,12 +495,7 @@ species microCell parent:cells{
 species changeLog{
 	map<int, string> mainLog <- [];
 	map<int, changeLog> childrenLogs <- [];
-	cells c;
-	
-	action addToLog(int i, string type){
-		add type at: i to: mainLog;
-		ask c {do populateParentChangeLog;}
-	}
+//	cells c;
 }
 
 species macroConnection parent: connection{
@@ -501,9 +513,11 @@ species microConnection parent: connection{
 
 experiment REGICID{
 	output{
+
 		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  
 		editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
 		
+
 		display macro type:opengl draw_env:true{
 			species macroCell aspect:macro;
 			event mouse_down action: activateMacro; 
