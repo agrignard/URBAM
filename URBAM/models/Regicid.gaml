@@ -24,7 +24,9 @@ global{
 	
 	macroCell currentMacro_tmp;
 	mesoCell currentMeso_tmp;
-	
+	float prop_moving_macro <- 0.01;
+	float prop_returning <- 0.1;
+	map<string, float> proba_macro_to_move_to <- ["City"::0.5, "Village"::0.2, "Park"::0.2,"Lake"::0.1];
 	list<string> macroCellsTypes <- ["City", "Village", "Park","Lake"];
 	map<string, rgb> macroCellsColors <- ["City"::#gamaorange, "Village"::#gamared, "Park"::#green,"Lake"::#blue];
 	
@@ -55,6 +57,10 @@ global{
 		do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
 		do load_profiles;
 		do init_nb_habitants;
+		float dist <- sqrt((macroCellWidth) ^2 + (macroCellHeight)^2)  * 1.1;
+		ask macroCell {
+			connectedCells <- macroCell at_distance dist;
+		}
 	}
 	action init_nb_habitants {
 		int nb_cells <- nbCellsHeight * nbCellsWidth;
@@ -133,6 +139,8 @@ global{
 			macroCell ori <- macroCell first_with each.origin_creation;
 			if (dest != ori) {
 				create macroConnection with: [shape::line([ori, dest])];
+				dest.connectedCells << ori;
+				ori.connectedCells << dest;
 			} 
 			creating_connection <- false;
 			ori.origin_creation <- false;
@@ -141,6 +149,7 @@ global{
 					do generate_meso_connexions;
 				}
 			}
+			
 		} else {
 			currentMacro_tmp <- (macroCell closest_to  #user_location);
 		}
@@ -176,11 +185,13 @@ species cells parent: poi{
 	float width;
 	float height;
 	int nbInhabitants;
+	map<cells, int> visitors;
 	cells currentSelectedCell;
 	changeLog log;
 	cells parentCell;
 	map<list<int>,string> changeLog2 <- [];
 	bool origin_creation <- false;
+	
 	
 	//for RNG
 	float value;
@@ -264,6 +275,7 @@ species cells parent: poi{
 	
 	aspect macroTable{
 		draw rectangle(width,height) depth:nbInhabitants/10.0 color:macroCellsColors[type] border:macroCellsColors[type]+25;
+		draw box(width* 0.8,height * 0.8,sum(visitors.values)/10.0) at: location + {0,0,nbInhabitants/10.0} color:#magenta border:#black;
 	}
 	
 	aspect mesoTable{
@@ -307,6 +319,28 @@ species macroCell parent: cells{
 	user_command "Park"action: modifyToPark;
 	user_command "Lake"action: modifyToLake;
 	int index -> int(self) - int(first(macroCell));
+	list<macroCell> connectedCells;
+	
+	reflex peopleMoving when: every(100 #cycle){
+		int nb <- int(prop_moving_macro * length(connectedCells) * nbInhabitants );
+		nbInhabitants <- nbInhabitants - nb;
+		list<float> proba <- connectedCells collect proba_macro_to_move_to[each.type];
+		float tot <- sum(proba);
+		loop i from:0 to: length(proba) - 1 {
+			ask connectedCells[i] {
+				visitors[myself] <- visitors[myself] + proba[i] *nb/tot  ;
+			}
+		}
+		
+	}
+	
+	reflex peopleComingBack when: every(10 #cycle){
+		loop v over: visitors.keys {
+			int nb <- int(visitors[v] * prop_returning);
+			visitors[v] <- visitors[v] - nb;
+			v.nbInhabitants <- v.nbInhabitants + nb;
+		}
+	}
 	
 	
 	action generateMeso{
