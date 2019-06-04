@@ -16,7 +16,7 @@ global{
 	float macroCellWidth<-100#km;
 	float macroCellHeight<-100#km;
 	
-	int global_people_size <-100;
+	int global_people_size <-200;
 	cells currentMacro;
 	cells currentMeso;
 	
@@ -30,12 +30,15 @@ global{
 	
 	list<string> mesoCellsTypes <- ["Residential", "Commercial", "Industrial", "Educational", "Park","Lake"];
 	map<string, rgb> mesoCellsColors <- ["Residential"::#gamared, "Commercial"::#gamablue, "Industrial"::#gamaorange, "Educational"::#white, "Park"::#green,"Lake"::#blue];
+	map<string, rgb> mesoCellsInhabitantsCoeff <- ["Residential"::0.3, "Commercial"::0.1, "Industrial"::0.1, "Educational"::#white, "Park"::#green,"Lake"::#blue];
 	
 	list<string> microCellsTypes <- ["Residential", "Commercial", "Industrial", "Educational", "Park","Lake"];
 	map<string, rgb> microCellsColors <- ["Residential"::#gamared, "Commercial"::#gamablue, "Industrial"::#gamaorange, "Educational"::#white, "Park"::#green,"Lake"::#blue];
 	
 	map<string, list<int>> macroCellsProportions <- ["City"::[30,30,30,10,10,5], "Village"::[10,7,5,5,50,10], "Park"::[3,3,0,0,85,10],"Lake"::[5,0,0,0,5,100]];
 	map<string, list<int>> mesoCellsProportions <- ["Residential"::[70,5,0,5,20,5], "Commercial"::[10,80,0,5,20,0], "Industrial"::[5,5,90,0,0,0], "Educational"::[10,10,0,70,25,0], "Park"::[10,5,0,0,70,20],"Lake"::[5,5,0,0,5,80]];
+	map<string, float> densityPeoplePerType <-["Residential"::2000.0, "Commercial"::400.0, "Industrial"::200.0, "Educational"::1000.0, "Park"::200.0,"Lake"::0.0];
+	
 	
 	float building_scale parameter: 'cell scale:' category: 'cell Aspect' <- 0.8 min: 0.2 max: 1.0; 
 	
@@ -51,8 +54,34 @@ global{
 		//do createRandomGrid;
 		do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
 		do load_profiles;
+		do init_nb_habitants;
 	}
-	
+	action init_nb_habitants {
+		int nb_cells <- nbCellsHeight * nbCellsWidth;
+		map<string,int> nb_type_meso;
+		
+		loop t over: mesoCellsProportions.keys {
+			list<int> prop <- mesoCellsProportions[t];
+			int tot <- sum(prop);
+			int nb <- 0;
+			loop tt over: densityPeoplePerType.keys {
+				nb <- nb + int(densityPeoplePerType[tt] * nb_cells * prop[microCellsTypes index_of tt]/ tot);
+			}
+			
+			nb_type_meso[t] <- nb;
+		}
+		ask macroCell {
+			list<int> prop <- macroCellsProportions[type];
+			int tot <- sum(prop);
+			int nb;
+			loop t over: nb_type_meso.keys {
+				nbInhabitants <- nbInhabitants + int(nb_type_meso[t] * nb_cells * prop[mesoCellsTypes index_of t]/ tot);
+			}
+			
+		
+		}
+		
+	}
 	action load_macro_grid(string path_to_file) {
 		file my_csv_file <- csv_file(path_to_file,",");
 		matrix data <- matrix(my_csv_file);
@@ -64,7 +93,6 @@ global{
 					location<-{width*i+width/2,height*j+height/2};
 					seed <- float(rnd(1000000));
 					type <- string(data[i, j]);
-					density<-rnd(10);
 				}
 			}
 		}	
@@ -80,7 +108,6 @@ global{
 					location<-{width*i+width/2,height*j+height/2};
 					seed <- float(rnd(1000000));
 					type <- one_of(macroCellsTypes);
-					density<-rnd(10);
 				}
 			}
 		}
@@ -148,7 +175,7 @@ species cells parent: poi{
 	float seed;
 	float width;
 	float height;
-	int density;
+	int nbInhabitants;
 	cells currentSelectedCell;
 	changeLog log;
 	cells parentCell;
@@ -236,15 +263,15 @@ species cells parent: poi{
 	}
 	
 	aspect macroTable{
-		draw rectangle(width,height) depth:density color:macroCellsColors[type] border:macroCellsColors[type]+25;
+		draw rectangle(width,height) depth:nbInhabitants/10.0 color:macroCellsColors[type] border:macroCellsColors[type]+25;
 	}
 	
 	aspect mesoTable{
-		draw rectangle(width*nbCellsWidth * building_scale,height*nbCellsHeight* building_scale) depth:density color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight};
+		draw rectangle(width*nbCellsWidth * building_scale,height*nbCellsHeight* building_scale) depth:nbInhabitants color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight};
 	}
 
 	aspect microTable{
-		draw rectangle(width*nbCellsWidth*nbCellsWidth*building_scale,height*nbCellsHeight*nbCellsHeight* building_scale) depth:density color:microCellsColors[type] border:microCellsColors[type]-25 at:{world.shape.width*3.5+(location.x-currentMeso.location.x)*nbCellsWidth*nbCellsWidth,world.shape.height/2+(location.y-currentMeso.location.y)*nbCellsHeight*nbCellsHeight};
+		draw rectangle(width*nbCellsWidth*nbCellsWidth*building_scale,height*nbCellsHeight*nbCellsHeight* building_scale) depth:nbInhabitants color:microCellsColors[type] border:microCellsColors[type]-25 at:{world.shape.width*3.5+(location.x-currentMeso.location.x)*nbCellsWidth*nbCellsWidth,world.shape.height/2+(location.y-currentMeso.location.y)*nbCellsHeight*nbCellsHeight};
 	}
 	
 }
@@ -267,7 +294,7 @@ species macroConnection parent: connection{
 species mesoConnection parent: connection{
 	float coeff <- 1.0 #km;
 	rgb color <- #red;
-	
+	macroConnection myMacroConnection;
 }
 
 
@@ -280,6 +307,8 @@ species macroCell parent: cells{
 	user_command "Park"action: modifyToPark;
 	user_command "Lake"action: modifyToLake;
 	int index -> int(self) - int(first(macroCell));
+	
+	
 	action generateMeso{
 		ask world{do clean_people_road;}
 		currentMacro<-self;
@@ -300,13 +329,32 @@ species macroCell parent: cells{
 					type <- myself.affectMesoCellType();
 					parentCell <- myself;
 					seed <- float(myself.rand(1000000));
-					density<-rnd(10);
 				}
 			}
 		}
-		
 		do applyChanges;
+		do init_nb_habitants;
 		do generate_meso_connexions;
+		
+	}
+	
+	action init_nb_habitants {
+		int nb_cells <- nbCellsHeight * nbCellsWidth;
+		map<string,int> nb_type_meso;
+		
+		loop t over: mesoCellsProportions.keys {
+			list<int> prop <- mesoCellsProportions[t];
+			int tot <- sum(prop);
+			int nb <- 0;
+			loop tt over: densityPeoplePerType.keys {
+				nb <- nb + int(densityPeoplePerType[tt] * nb_cells * prop[microCellsTypes index_of tt]/ tot);
+			}
+			
+			nb_type_meso[t] <- nb;
+		}
+		ask mesoCell {
+			nbInhabitants <- nb_type_meso[type];
+		}
 		
 	}
 	
@@ -319,11 +367,18 @@ species macroCell parent: cells{
 		list<macroConnection> mcs <- macroConnection overlapping s;
 		if (not empty(mcs)) {
 			list<geometry> lines <- [];
+			map<geometry, macroConnection> linkToMacro;
 			loop mc over: mcs {
-				lines <- lines + generate_lines(mc, s);
+				list<geometry> ls <- generate_lines(mc, s);
+				loop l over: ls {
+					linkToMacro[l] <- mc;
+				}
+				lines <- lines + ls;
 			}
 			lines <- remove_duplicates(lines);
-			create mesoConnection from: lines;
+			create mesoConnection from: lines {
+				myMacroConnection <- linkToMacro[shape];
+			}
 		}
 	}
 	
@@ -432,7 +487,8 @@ species mesoCell parent:cells{
 	
 	macroCell parentCell;
 	
-	action generateMicro{
+	
+	action generateMicro {
 		block_size <- min([width/nbCellsWidth,height/nbCellsHeight]);
 		ask world{do clean_people_road;}
 		currentMeso<-self;
@@ -449,21 +505,24 @@ species mesoCell parent:cells{
 					type <- myself.affectMicroCellType();
 					parentCell <- myself;	
 					seed <- float(myself.rand(1000000));
-					density<-rnd(10);
-					create people number: density with: [location::location]{
-						origin <- myself;
-						list_of_people << self;
-						do reinit_destination;
-						map<profile, float> prof_pro <- proportions_per_bd_type[one_of(proportions_per_bd_type.keys)];
-						my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
-			
-					}
+					
 				}
 			}
 		}
 		do generate_road;
 		do applyChanges;
 		
+		ask microCell {
+			nbInhabitants <- round(width/nbCellsWidth/#km * height/nbCellsWidth/#km * densityPeoplePerType[type]);
+			myself.nbInhabitants <- myself.nbInhabitants + nbInhabitants;
+			create people number: nbInhabitants with: [location::location]{
+				origin <- myself;
+				list_of_people << self;
+				do reinit_destination;
+				map<profile, float> prof_pro <- proportions_per_bd_type[one_of(proportions_per_bd_type.keys)];
+				my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
+			}
+		}
 		
 	}
 
