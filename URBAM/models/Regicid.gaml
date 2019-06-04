@@ -37,6 +37,8 @@ global{
 	map<string, list<int>> macroCellsProportions <- ["City"::[30,30,30,10,10,5], "Village"::[10,7,5,5,50,10], "Park"::[3,3,0,0,85,10],"Lake"::[5,0,0,0,5,100]];
 	map<string, list<int>> mesoCellsProportions <- ["Residential"::[70,5,0,5,20,5], "Commercial"::[10,80,0,5,20,0], "Industrial"::[5,5,90,0,0,0], "Educational"::[10,10,0,70,25,0], "Park"::[10,5,0,0,70,20],"Lake"::[5,5,0,0,5,80]];
 	
+	float building_scale parameter: 'cell scale:' category: 'cell Aspect' <- 0.8 min: 0.2 max: 1.0; 
+	
 	// for the RNG
 	float a <- 25214903917.0;
 	float c <- 11.0;
@@ -103,10 +105,15 @@ global{
 			macroCell dest <- (macroCell closest_to  #user_location);
 			macroCell ori <- macroCell first_with each.origin_creation;
 			if (dest != ori) {
-				create connection with: [shape::line([ori, dest])];
+				create macroConnection with: [shape::line([ori, dest])];
 			} 
 			creating_connection <- false;
 			ori.origin_creation <- false;
+			if (currentMacro != nil) {
+				ask macroCell(currentMacro) {
+					do generate_meso_connexions;
+				}
+			}
 		} else {
 			currentMacro_tmp <- (macroCell closest_to  #user_location);
 		}
@@ -114,6 +121,14 @@ global{
 		
 	}	
 	
+	action create_connection_macro {
+		ask (macroCell closest_to #user_location) {
+			creating_connection <- true;
+			origin_creation<- true;
+		}
+	
+		
+	} 
 	action activateMeso {
 		currentMeso_tmp <- (mesoCell closest_to #user_location);
 	}	
@@ -204,17 +219,20 @@ species cells parent: poi{
 	}
 	
 	aspect meso{
+		float w <- building_scale * width;
+		float h <- building_scale * height;
+		
 		if (self = currentMeso) {
-			draw rectangle(width,height) color:#magenta;
-			draw rectangle(width* 0.8,height* 0.8) color:mesoCellsColors[type] depth: 1;
+			draw rectangle(w,h) color:#magenta;
+			draw rectangle(w* 0.8,h* 0.8) color:mesoCellsColors[type] depth: 1;
 		} else {
-			draw rectangle(width,height) color:mesoCellsColors[type];
+			draw rectangle(w,h) color:mesoCellsColors[type];
 		}
 		
 	}
 	
 	aspect micro{
-		draw rectangle(width,height) color: microCellsColors[type];
+		draw rectangle(width * building_scale,height * building_scale) color: microCellsColors[type];
 	}
 	
 	aspect macroTable{
@@ -222,11 +240,11 @@ species cells parent: poi{
 	}
 	
 	aspect mesoTable{
-		draw rectangle(width*nbCellsWidth,height*nbCellsHeight) depth:density color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight};
+		draw rectangle(width*nbCellsWidth * building_scale,height*nbCellsHeight* building_scale) depth:density color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight};
 	}
 
 	aspect microTable{
-		draw rectangle(width*nbCellsWidth*nbCellsWidth,height*nbCellsHeight*nbCellsHeight) depth:density color:microCellsColors[type] border:microCellsColors[type]-25 at:{world.shape.width*3.5+(location.x-currentMeso.location.x)*nbCellsWidth*nbCellsWidth,world.shape.height/2+(location.y-currentMeso.location.y)*nbCellsHeight*nbCellsHeight};
+		draw rectangle(width*nbCellsWidth*nbCellsWidth*building_scale,height*nbCellsHeight*nbCellsHeight* building_scale) depth:density color:microCellsColors[type] border:microCellsColors[type]-25 at:{world.shape.width*3.5+(location.x-currentMeso.location.x)*nbCellsWidth*nbCellsWidth,world.shape.height/2+(location.y-currentMeso.location.y)*nbCellsHeight*nbCellsHeight};
 	}
 	
 }
@@ -235,12 +253,22 @@ species connection{
 	string type;
 	cells source;
 	cells destination;
-	
+	rgb color <- #black;
+	float coeff <- 1.0;
 	aspect default {
-		draw shape color: #black end_arrow: 10#km;
+		draw shape + (line_width * coeff) color: color ;
 	}
 }
 
+species macroConnection parent: connection{
+	float coeff <- 10.0 #km;
+}
+
+species mesoConnection parent: connection{
+	float coeff <- 1.0 #km;
+	rgb color <- #red;
+	
+}
 
 
 species macroCell parent: cells{
@@ -255,6 +283,7 @@ species macroCell parent: cells{
 	action generateMeso{
 		ask world{do clean_people_road;}
 		currentMacro<-self;
+		
 		ask mesoCell{
 			do clean;
 		}
@@ -266,7 +295,7 @@ species macroCell parent: cells{
 			loop j from:0 to:nbCellsHeight-1{
 				create mesoCell{
 					width<-myself.width/nbCellsWidth;
-					height<-myself.height/nbCellsWidth;
+					height<-myself.height/nbCellsHeight;
 					location<-{myself.location.x-myself.width/2+width*i+width/2,myself.location.y-myself.height/2+height*j+height/2};
 					type <- myself.affectMesoCellType();
 					parentCell <- myself;
@@ -275,10 +304,52 @@ species macroCell parent: cells{
 				}
 			}
 		}
-
+		
 		do applyChanges;
+		do generate_meso_connexions;
+		
 	}
 	
+	action generate_meso_connexions {
+		ask mesoConnection {
+			do die;
+		}
+		geometry s <- rectangle(width,height);
+		
+		list<macroConnection> mcs <- macroConnection overlapping s;
+		if (not empty(mcs)) {
+			list<geometry> lines <- [];
+			loop mc over: mcs {
+				lines <- lines + generate_lines(mc, s);
+			}
+			lines <- remove_duplicates(lines);
+			create mesoConnection from: lines;
+		}
+	}
+	
+	list<geometry> generate_lines(macroConnection mc, geometry s) {
+		geometry ov <- mc inter s;
+		point origin <- first(ov.points);
+		point dest <- last(ov.points);
+		list<geometry> lines;
+		float w <- width/nbCellsWidth;
+		float h <- height/nbCellsHeight;
+		float min_x <- s.points min_of each.x;
+		float min_y <- s.points min_of each.y;
+		loop i from: 0 to: nbCellsWidth {
+				lines << line([{i*w+ min_x,min_y}, {i*w+min_x,height+min_y}]);
+			}
+		loop i from: 0 to: nbCellsHeight {
+			lines << line([{min_x, i*h+min_y}, {width+ min_x,i*h+min_y}]);
+		}
+		lines <- split_lines(lines);
+		graph g <- as_edge_graph(lines);
+		path p <- g path_between(origin, dest);
+		if (p != nil ) {
+			return p.edges;
+		}
+		return [];
+	}
 	
 	action applyChanges{
 		if log != nil{
@@ -332,7 +403,7 @@ species macroCell parent: cells{
 	}
 	
 	
-	user_command create_connextion {
+	user_command create_connection {
 		creating_connection <- true;
 		origin_creation<- true;
 		
@@ -409,12 +480,12 @@ species mesoCell parent:cells{
 		loop i from: 0 to: nbCellsWidth {
 				lines << line([{i*w+ min_x,min_y}, {i*w+min_x,height+min_y}]);
 			}
-			loop i from: 0 to: nbCellsHeight {
-				lines << line([{min_x, i*h+min_y}, {width+ min_x,i*h+min_y}]);
-			}
-			create road from: split_lines(lines) {
-				create road with: [shape:: line(reverse(shape.points))];
-			}
+		loop i from: 0 to: nbCellsHeight {
+			lines << line([{min_x, i*h+min_y}, {width+ min_x,i*h+min_y}]);
+		}
+		create road from: split_lines(lines) {
+			create road with: [shape:: line(reverse(shape.points))];
+		}
 		ask world {do update_graphs;}
 		
 		
@@ -608,17 +679,7 @@ species changeLog{
 //	cells c;
 }
 
-species macroConnection parent: connection{
-	
-}
 
-species mesoConnection parent: connection{
-	
-}
-
-species microConnection parent: connection{
-	
-}
 
 species people parent: basic_people skills: [moving]{
 	action reinit_destination {
@@ -636,12 +697,14 @@ experiment REGICID autorun: true{
 
 		display macro type:opengl draw_env:true{
 			species macroCell aspect:macro;
-			species connection;
+			species macroConnection;
 			event mouse_down action: activateMacro; 
+			event "r" action: create_connection_macro; 
 			
 		}
 		display meso type:opengl draw_env:false camera_pos:  currentMacro = nil ?  {world.location.x, world.location.y, world.shape.width/(nbCellsWidth*0.8)} : {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  currentMacro = nil ? world.location :{currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
+			species mesoConnection;
 			event mouse_down action: activateMeso; 			
 		}
 
