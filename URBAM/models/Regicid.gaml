@@ -41,6 +41,7 @@ global{
 	float m <- 2^48;
 	geometry shape <-rectangle(nbCellsWidth*macroCellWidth, nbCellsHeight*macroCellHeight);
 	file imageRaster <- file('./../images/Kent_Sketches.png');
+	float step <- macroCellWidth/nbCellsWidth /2000.0 ;
 	
 	init{
 		//do createRandomGrid;
@@ -592,7 +593,7 @@ experiment REGICID autorun: true{
 			event mouse_down action: activateMeso; 			
 		}
 
-		display micro type:opengl  draw_env:false z_near: world.shape.width / 1000  camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display micro type:opengl synchronized: true draw_env:false z_near: world.shape.width / 1000  camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species microCell aspect:micro;
 			species road ;
 			species people;
