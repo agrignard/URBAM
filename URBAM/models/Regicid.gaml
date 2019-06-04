@@ -15,7 +15,7 @@ global{
 	int nbCellsHeight<-10;
 	float macroCellWidth<-100#km;
 	float macroCellHeight<-100#km;
-	
+	bool neighbors_connection <- false;
 	int global_people_size <-200;
 	cells currentMacro;
 	cells currentMeso;
@@ -24,9 +24,8 @@ global{
 	
 	macroCell currentMacro_tmp;
 	mesoCell currentMeso_tmp;
-	float prop_moving_macro <- 0.01;
 	float prop_returning <- 0.1;
-	map<string, float> proba_macro_to_move_to <- ["City"::0.5, "Village"::0.2, "Park"::0.2,"Lake"::0.1];
+	map<string, float> prop_macro_to_move_to <- ["City"::0.05, "Village"::0.02, "Park"::0.02,"Lake"::0.01];
 	list<string> macroCellsTypes <- ["City", "Village", "Park","Lake"];
 	map<string, rgb> macroCellsColors <- ["City"::#gamaorange, "Village"::#gamared, "Park"::#green,"Lake"::#blue];
 	
@@ -58,9 +57,12 @@ global{
 		do load_profiles;
 		do init_nb_habitants;
 		float dist <- sqrt((macroCellWidth) ^2 + (macroCellHeight)^2)  * 1.1;
-		ask macroCell {
-			connectedCells <- macroCell at_distance dist;
+		if (neighbors_connection) {
+			ask macroCell {
+				connectedCells <- macroCell at_distance dist;
+			}
 		}
+		
 	}
 	action init_nb_habitants {
 		int nb_cells <- nbCellsHeight * nbCellsWidth;
@@ -191,6 +193,7 @@ species cells parent: poi{
 	cells parentCell;
 	map<list<int>,string> changeLog2 <- [];
 	bool origin_creation <- false;
+	rgb color <- rnd_color(255);
 	
 	
 	//for RNG
@@ -275,7 +278,13 @@ species cells parent: poi{
 	
 	aspect macroTable{
 		draw rectangle(width,height) depth:nbInhabitants/10.0 color:macroCellsColors[type] border:macroCellsColors[type]+25;
-		draw box(width* 0.8,height * 0.8,sum(visitors.values)/10.0) at: location + {0,0,nbInhabitants/10.0} color:#magenta border:#black;
+		float d <- nbInhabitants/10.0;
+		loop v over: visitors.keys {
+			float nb <- visitors[v]/10.0;
+			draw box(width* 0.8,height * 0.8,nb) at: location + {0,0,d} color:v.color border:#black;
+			d <- d + nb;
+		}
+		
 	}
 	
 	aspect mesoTable{
@@ -321,11 +330,11 @@ species macroCell parent: cells{
 	int index -> int(self) - int(first(macroCell));
 	list<macroCell> connectedCells;
 	
-	reflex peopleMoving when: every(100 #cycle){
-		int nb <- int(prop_moving_macro * length(connectedCells) * nbInhabitants );
-		nbInhabitants <- nbInhabitants - nb;
-		list<float> proba <- connectedCells collect proba_macro_to_move_to[each.type];
+	reflex peopleMoving when: every(100 #cycle) and not empty(connectedCells){
+		list<float> proba <- connectedCells collect prop_macro_to_move_to[each.type];
 		float tot <- sum(proba);
+		int nb <- int(tot * length(connectedCells) * nbInhabitants );
+		nbInhabitants <- nbInhabitants - nb;
 		loop i from:0 to: length(proba) - 1 {
 			ask connectedCells[i] {
 				visitors[myself] <- visitors[myself] + proba[i] *nb/tot  ;
