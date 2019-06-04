@@ -15,10 +15,10 @@ global{
 	
 	int macro_grid_width <- 12;
 	int macro_grid_height <- 12;
-	int meso_grid_width <- 8;
-	int meso_grid_height <- 8;
-	int micro_grid_width <- 10;
-	int micro_grid_height <- 10;
+	int meso_grid_width <- 12;
+	int meso_grid_height <- 12;
+	int micro_grid_width <- 12;
+	int micro_grid_height <- 12;
 	
 	
 	float environment_height <- 5000.0;
