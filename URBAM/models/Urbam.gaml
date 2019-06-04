@@ -25,6 +25,13 @@ global{
 	bool udpSliderReader <- true; 
 	bool editionMode <-false;
 	
+	bool show_cells parameter: 'Show cells:' category: 'Aspect' <- false;
+	bool show_building parameter: 'Show Building:' category: 'Aspect' <- true;
+	
+	bool on_modification_cells <- false update: show_cells != show_cells_prev;
+	
+	bool show_cells_prev <- show_cells update: show_cells ;
+	bool on_modification_bds <- false update: false;
 	
 	
 	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/cityIO_gama";

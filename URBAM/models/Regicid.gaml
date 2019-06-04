@@ -311,6 +311,8 @@ species mesoCell parent:cells{
 	macroCell parentCell;
 	
 	action generateMicro{
+		block_size <- min([width/nbCellsWidth,height/nbCellsHeight]);
+		
 		currentMeso<-self;
 		ask microCell{
 			do clean;

@@ -20,9 +20,6 @@ global{
 	float line_width parameter: 'Line width' category: 'Road Aspect' <- 0.65 min:0.0 max: 3.0;
 	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
 	
-	float building_scale parameter: 'Building scale:' category: 'Building Aspect' <- 0.65 min: 0.2 max: 1.0; 
-	bool show_cells parameter: 'Show cells:' category: 'Aspect' <- false;
-	bool show_building parameter: 'Show Building:' category: 'Aspect' <- true;
 	
 	bool blackMirror parameter: 'Dark Room' category: 'Aspect' <- true;
 	
@@ -37,11 +34,7 @@ global{
 	float computed_line_width;
 	float road_width;
 	float block_size;
-	
-	bool on_modification_cells <- false update: show_cells != show_cells_prev;
-	
-	bool show_cells_prev <- show_cells update: show_cells ;
-	bool on_modification_bds <- false update: false;
+	float building_scale parameter: 'Building scale:' category: 'Building Aspect' <- 0.65 min: 0.2 max: 1.0; 
 	
 	
 	//ORIGINAL map<string,int> max_traffic_per_mode <- ["car"::90, "bike"::10, "walk"::50];
@@ -241,6 +234,7 @@ species road {
 				}
 			}	
 			match "split (5)"{
+				
 				loop t over: mode_order.keys{
 					float scale <- min([1,traffic_density[t][0] / max_traffic_per_mode[t]]);	
 					if dynamical_width{
