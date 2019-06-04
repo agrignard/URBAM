@@ -350,43 +350,46 @@ species basic_people skills: [moving]{
 	
 	aspect default{
 		point offset <- {0,0};
-		if self.current_edge != nil {
-			if road_aspect = "split (3)"{
-				offset <- offsets[mobility_mode];
+		if not dead(self) {
+			
+			
+			if self.current_edge != nil {
+				if road_aspect = "split (3)"{
+					offset <- offsets[mobility_mode];
+				}
+				if road_aspect = "split (5)"{
+					offset <- offsets[mobility_mode]*(heading_index > 0 ? (-1): 1);
+				}			
+					
 			}
-			if road_aspect = "split (5)"{
-				offset <- offsets[mobility_mode]*(heading_index > 0 ? (-1): 1);
-			}			
-				
-		}
-		switch people_aspect {
-		   match "mode" {	
-				if (target != nil or dest = nil) {
-					if(mobility_mode ="car"){
-					  draw copy(shape_per_mode[mobility_mode])  color: color_per_mode[mobility_mode] border:color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;
-					}else{
-					  draw copy(shape_per_mode[mobility_mode])  color: color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;	
-					}
+			switch people_aspect {
+			   match "mode" {	
+					if (target != nil or dest = nil) {
+						if(mobility_mode ="car"){
+						  draw copy(shape_per_mode[mobility_mode])  color: color_per_mode[mobility_mode] border:color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;
+						}else{
+						  draw copy(shape_per_mode[mobility_mode])  color: color_per_mode[mobility_mode] rotate:heading +90 at: location+offset;	
+						}
+					}	
 				}	
-			}	
-			match "profile" {
-				if (target != nil or dest = nil) {
-					if(mobility_mode ="car"){
-					  draw copy(shape_per_mode[mobility_mode])  empty:true border:color_per_profile[my_profile.name] rotate:heading +90 at: location+offset;
-					}else{
-					  draw copy(shape_per_mode[mobility_mode])  color: color_per_profile[my_profile.name] rotate:heading +90 at: location+offset;	
+				match "profile" {
+					if (target != nil or dest = nil) {
+						if(mobility_mode ="car"){
+						  draw copy(shape_per_mode[mobility_mode])  empty:true border:color_per_profile[my_profile.name] rotate:heading +90 at: location+offset;
+						}else{
+						  draw copy(shape_per_mode[mobility_mode])  color: color_per_profile[my_profile.name] rotate:heading +90 at: location+offset;	
+						}
 					}
 				}
+				match "dynamic_abstract"{		
+					float scale <- min([1,road(current_edge).total_traffic() / 100])^2;
+					if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)] at: location+offset;}
+				}		
+				match "dynamic_abstract (car)"{		
+					float scale <- min([1,road(current_edge).total_traffic_per_mode('car') / 100])^2;
+					if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)] at: location+offset;}
+				}		
 			}
-			match "dynamic_abstract"{		
-				float scale <- min([1,road(current_edge).total_traffic() / 100])^2;
-				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)] at: location+offset;}
-			}		
-			match "dynamic_abstract (car)"{		
-				float scale <- min([1,road(current_edge).total_traffic_per_mode('car') / 100])^2;
-				if (target != nil or dest = nil) {draw square(display_size) color: colormap_per_mode["car"][int(4*scale)] at: location+offset;}
-			}		
 		}
-		
 	}
 }

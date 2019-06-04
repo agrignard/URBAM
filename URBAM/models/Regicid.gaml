@@ -20,6 +20,8 @@ global{
 	cells currentMacro;
 	cells currentMeso;
 	
+	bool creating_connection <- false;
+	
 	macroCell currentMacro_tmp;
 	mesoCell currentMeso_tmp;
 	
@@ -46,8 +48,6 @@ global{
 	init{
 		//do createRandomGrid;
 		do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
-		currentMacro<- one_of(macroCell);
-		currentMeso<- one_of(macroCell);
 		do load_profiles;
 	}
 	
@@ -85,26 +85,44 @@ global{
 	}
 	
 	reflex updateMacroMeso {
-		if (currentMacro != currentMacro_tmp) {
+		if (currentMacro_tmp != nil and currentMacro != currentMacro_tmp) {
 			ask currentMacro_tmp{
 				do generateMeso;
 			}
+			currentMeso_tmp <- nil;
+			currentMeso <- nil;
 		}
-		if (currentMeso != currentMeso_tmp) {
+		if (currentMeso_tmp != nil and currentMeso != currentMeso_tmp) {
 			ask currentMeso_tmp{
 				do generateMicro;
 			}
 		}
 	}
 	action activateMacro {
-		currentMacro_tmp <- (macroCell closest_to  #user_location);
+		if (creating_connection) {
+			macroCell dest <- (macroCell closest_to  #user_location);
+			macroCell ori <- macroCell first_with each.origin_creation;
+			if (dest != ori) {
+				create connection with: [shape::line([ori, dest])];
+			} 
+			creating_connection <- false;
+			ori.origin_creation <- false;
+		} else {
+			currentMacro_tmp <- (macroCell closest_to  #user_location);
+		}
+		
 		
 	}	
 	
 	action activateMeso {
 		currentMeso_tmp <- (mesoCell closest_to #user_location);
-		
 	}	
+	
+	action clean_people_road {
+		ask people {do die;}
+		ask road {do die;}
+		
+	}
 	
 }
 
@@ -120,6 +138,7 @@ species cells parent: poi{
 	changeLog log;
 	cells parentCell;
 	map<list<int>,string> changeLog2 <- [];
+	bool origin_creation <- false;
 	
 	//for RNG
 	float value;
@@ -171,11 +190,27 @@ species cells parent: poi{
 	}
 	
 	aspect macro{
-		draw rectangle(width,height) color: macroCellsColors[type] ;
+		if (self = currentMacro) {
+			draw rectangle(width,height) color:#magenta;
+			draw rectangle(width * 0.8,height * 0.8) color: macroCellsColors[type] depth: 1;
+		} else {
+			draw rectangle(width,height) color: macroCellsColors[type] ;
+		}
+		if (origin_creation) {
+			draw triangle(width * 0.5) color: #pink border: #black depth: 1.5;
+		}
+		
+		
 	}
 	
 	aspect meso{
-		draw rectangle(width,height) color:mesoCellsColors[type];
+		if (self = currentMeso) {
+			draw rectangle(width,height) color:#magenta;
+			draw rectangle(width* 0.8,height* 0.8) color:mesoCellsColors[type] depth: 1;
+		} else {
+			draw rectangle(width,height) color:mesoCellsColors[type];
+		}
+		
 	}
 	
 	aspect micro{
@@ -197,9 +232,16 @@ species cells parent: poi{
 }
 
 species connection{
+	string type;
 	cells source;
 	cells destination;
+	
+	aspect default {
+		draw shape color: #black end_arrow: 10#km;
+	}
 }
+
+
 
 species macroCell parent: cells{
 	int level <- 0;
@@ -210,8 +252,8 @@ species macroCell parent: cells{
 	user_command "Park"action: modifyToPark;
 	user_command "Lake"action: modifyToLake;
 	int index -> int(self) - int(first(macroCell));
-	
 	action generateMeso{
+		ask world{do clean_people_road;}
 		currentMacro<-self;
 		ask mesoCell{
 			do clean;
@@ -236,6 +278,7 @@ species macroCell parent: cells{
 
 		do applyChanges;
 	}
+	
 	
 	action applyChanges{
 		if log != nil{
@@ -287,6 +330,13 @@ species macroCell parent: cells{
 		type<-macroCellsTypes[3];
 		do generateMeso;
 	}
+	
+	
+	user_command create_connextion {
+		creating_connection <- true;
+		origin_creation<- true;
+		
+	}
 }
 
 species mesoCell parent:cells{
@@ -313,13 +363,11 @@ species mesoCell parent:cells{
 	
 	action generateMicro{
 		block_size <- min([width/nbCellsWidth,height/nbCellsHeight]);
-		
+		ask world{do clean_people_road;}
 		currentMeso<-self;
 		ask microCell{
 			do clean;
 		}
-		ask people {do die;}
-		ask road {do die;}
 		do reset_RNG;
 		loop i from: 0 to: nbCellsWidth-1{
 			loop j from:0 to:nbCellsHeight-1{
@@ -348,6 +396,8 @@ species mesoCell parent:cells{
 		
 	}
 
+	
+	
 	
 	action generate_road {
 		geometry s <- rectangle(width,height);
@@ -586,14 +636,16 @@ experiment REGICID autorun: true{
 
 		display macro type:opengl draw_env:true{
 			species macroCell aspect:macro;
+			species connection;
 			event mouse_down action: activateMacro; 
+			
 		}
-		display meso type:opengl draw_env:false camera_pos: {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  {currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display meso type:opengl draw_env:false camera_pos:  currentMacro = nil ?  {world.location.x, world.location.y, world.shape.width/(nbCellsWidth*0.8)} : {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  currentMacro = nil ? world.location :{currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
 			event mouse_down action: activateMeso; 			
 		}
 
-		display micro type:opengl synchronized: true draw_env:false z_near: world.shape.width / 1000  camera_pos: {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display micro type:opengl synchronized: true draw_env:false z_near: world.shape.width / 1000  camera_pos: currentMeso = nil ? {world.location.x, world.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} : {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  currentMeso = nil ? world.location : {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species microCell aspect:micro;
 			species road ;
 			species people;
