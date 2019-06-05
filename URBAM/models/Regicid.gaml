@@ -15,7 +15,7 @@ global{
 	int nbCellsHeight<-10;
 	float macroCellWidth<-100#km;
 	float macroCellHeight<-100#km;
-	
+	bool neighbors_connection <- false;
 	int global_people_size <-200;
 	cells currentMacro;
 	cells currentMeso;
@@ -24,6 +24,9 @@ global{
 	
 	macroCell currentMacro_tmp;
 	mesoCell currentMeso_tmp;
+	float prop_returning <- 0.1;
+	map<string, float> prop_macro_to_move_to <- ["City"::0.05, "Village"::0.02, "Park"::0.02,"Lake"::0.01];
+	map<string, float> prop_meso_to_move_to <- ["Residential"::0.01, "Commercial"::0.05, "Industrial"::0.02, "Educational"::0.02, "Park"::0.02,"Lake"::0.01];
 	
 	list<string> macroCellsTypes <- ["City", "Village", "Park","Lake"];
 	map<string, rgb> macroCellsColors <- ["City"::#gamaorange, "Village"::#gamared, "Park"::#green,"Lake"::#blue];
@@ -55,6 +58,14 @@ global{
 		do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
 		do load_profiles;
 		do init_nb_habitants;
+		if (neighbors_connection) {
+			float dist <- sqrt((macroCellWidth) ^2 + (macroCellHeight)^2)  * 1.1;
+			ask macroCell {
+				connectedCells <- macroCell at_distance dist;
+			}
+			
+		}
+		
 	}
 	action init_nb_habitants {
 		int nb_cells <- nbCellsHeight * nbCellsWidth;
@@ -65,7 +76,7 @@ global{
 			int tot <- sum(prop);
 			int nb <- 0;
 			loop tt over: densityPeoplePerType.keys {
-				nb <- nb + int(densityPeoplePerType[tt] * nb_cells * prop[microCellsTypes index_of tt]/ tot);
+				nb <- nb + int(world.nb_per_types(tt, macroCellWidth/nbCellsWidth/nbCellsWidth, macroCellHeight / nbCellsHeight / nbCellsHeight) * nb_cells * prop[microCellsTypes index_of tt]/ tot);
 			}
 			
 			nb_type_meso[t] <- nb;
@@ -127,12 +138,28 @@ global{
 			}
 		}
 	}
+	
+	action create_connection_macro {
+		ask (macroCell closest_to #user_location) {
+			creating_connection <- true;
+			origin_creation<- true;
+		}
+	}
+	
+	action create_connection_meso {
+		ask (mesoCell closest_to #user_location) {
+			creating_connection <- true;
+			origin_creation<- true;
+		}
+	}  
 	action activateMacro {
 		if (creating_connection) {
 			macroCell dest <- (macroCell closest_to  #user_location);
 			macroCell ori <- macroCell first_with each.origin_creation;
 			if (dest != ori) {
 				create macroConnection with: [shape::line([ori, dest])];
+				dest.connectedCells << ori;
+				ori.connectedCells << dest;
 			} 
 			creating_connection <- false;
 			ori.origin_creation <- false;
@@ -141,29 +168,38 @@ global{
 					do generate_meso_connexions;
 				}
 			}
+			
 		} else {
 			currentMacro_tmp <- (macroCell closest_to  #user_location);
 		}
-		
-		
 	}	
-	
-	action create_connection_macro {
-		ask (macroCell closest_to #user_location) {
-			creating_connection <- true;
-			origin_creation<- true;
-		}
-	
-		
-	} 
 	action activateMeso {
-		currentMeso_tmp <- (mesoCell closest_to #user_location);
+		if (creating_connection) {
+			mesoCell dest <- (mesoCell closest_to  #user_location);
+			mesoCell ori <- mesoCell first_with each.origin_creation;
+			if (dest != ori) {
+				ask macroCell(currentMacro) {
+					buildMesoConnexions<< pair(ori.location::dest.location);
+					do generate_meso_connexions;
+				}
+				
+			} 
+			creating_connection <- false;
+			ori.origin_creation <- false;
+			
+		} else {
+			currentMeso_tmp <- (mesoCell closest_to #user_location);
+		}
 	}	
 	
 	action clean_people_road {
 		ask people {do die;}
 		ask road {do die;}
 		
+	}
+	
+	int nb_per_types(string ty, float w, float h) {
+		return round(w/nbCellsWidth/#km * h/nbCellsWidth/#km * densityPeoplePerType[ty]);
 	}
 	
 }
@@ -176,15 +212,52 @@ species cells parent: poi{
 	float width;
 	float height;
 	int nbInhabitants;
+	map<cells, int> visitors;
 	cells currentSelectedCell;
 	changeLog log;
 	cells parentCell;
 	map<list<int>,string> changeLog2 <- [];
 	bool origin_creation <- false;
+	rgb color <- rnd_color(255);
+	int nb_cycles_returning;
+	int nb_cycles_moving;
+	list<cells> connectedCells;
 	
 	//for RNG
 	float value;
 
+	reflex peopleMoving when: (level < 2) and every(nb_cycles_moving #cycle) and not empty(connectedCells) {
+		map<string, float> prop_to_move_to <- level = 0 ?prop_macro_to_move_to :prop_meso_to_move_to;
+		ask connectedCells{
+			int nb <- int(nbInhabitants * prop_to_move_to[type] );
+			visitors[myself] <- visitors[myself] + nb  ;
+			myself.nbInhabitants <- myself.nbInhabitants - nb;
+		}
+		if (level = 0 and currentMacro != nil) {
+			ask macroCell(currentMacro) {
+				do distribute_visitors; 
+			}
+		}
+	}
+	
+	reflex peopleComingBack when: (level < 2) and every(nb_cycles_returning #cycle){
+		loop v over: visitors.keys where (each.level = level) {
+			int nb <- int(visitors[v] * prop_returning);
+			visitors[v] <- visitors[v] - nb;
+			v.nbInhabitants <- v.nbInhabitants + nb;
+			if (level = 1 and not empty(people) and nb > 0) {
+				ask nb among (people where (each.visitor_ori = v)) {
+					do die;
+				}
+			}
+		}
+		if (level = 0 and currentMacro != nil) {
+			ask macroCell(currentMacro) {
+				do distribute_visitors; 
+			}
+		}
+	}
+	
 	int rand(int n){
 		value <- a*value+c;
 		value <- value - floor(value/m)*m;
@@ -255,19 +328,37 @@ species cells parent: poi{
 		} else {
 			draw rectangle(w,h) color:mesoCellsColors[type];
 		}
-		
+		if (origin_creation) {
+			draw triangle(w * 0.5) color: #pink border: #black depth: 1.5;
+		}
 	}
 	
 	aspect micro{
 		draw rectangle(width * building_scale,height * building_scale) color: microCellsColors[type];
+		
 	}
 	
 	aspect macroTable{
-		draw rectangle(width,height) depth:nbInhabitants/10.0 color:macroCellsColors[type] border:macroCellsColors[type]+25;
+		draw rectangle(width,height) depth:nbInhabitants *10 color:macroCellsColors[type] border:macroCellsColors[type]+25;
+		float d <- nbInhabitants*10.0;
+		loop v over: visitors.keys {
+			float nb <- visitors[v]*10.0;
+			draw box(width* 0.8,height * 0.8,nb) at: location + {0,0,d} color:v.color border:#black;
+			d <- d + nb;
+		}
+		
 	}
 	
 	aspect mesoTable{
-		draw rectangle(width*nbCellsWidth * building_scale,height*nbCellsHeight* building_scale) depth:nbInhabitants color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight};
+		draw rectangle(width*nbCellsWidth * building_scale,height*nbCellsHeight* building_scale) depth:nbInhabitants * 100.0 color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight};
+		int d <- nbInhabitants * 100;
+		list<cells> vs <-  visitors.keys sort_by each.level;
+		loop v over: vs {
+			float sc <- v.level = 0 ? 0.8 : 0.5;
+			int nb <- visitors[v] * 100;
+			draw box(width*nbCellsWidth * building_scale * sc,height*nbCellsHeight* building_scale *sc,nb) at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight,d} color:v.color border:#black;
+			d <- d + nb;
+		}
 	}
 
 	aspect microTable{
@@ -307,6 +398,11 @@ species macroCell parent: cells{
 	user_command "Park"action: modifyToPark;
 	user_command "Lake"action: modifyToLake;
 	int index -> int(self) - int(first(macroCell));
+	list<pair<point,point>> buildMesoConnexions;
+	
+	int nb_cycles_returning <- 20;
+	int nb_cycles_moving <- 200;
+	
 	
 	
 	action generateMeso{
@@ -333,28 +429,63 @@ species macroCell parent: cells{
 			}
 		}
 		do applyChanges;
-		do init_nb_habitants;
+		do init_nb_habitants_meso;
 		do generate_meso_connexions;
 		
 	}
+	action distribute_visitors {
+		map<mesoCell,float> propCells;
+		float sumProp;
+		ask mesoCell {
+			float prop <- prop_meso_to_move_to[type];
+			sumProp <- sumProp + prop;
+			propCells[self] <- prop;
+		}
+		ask propCells.keys {
+			propCells[self] <- propCells[self]/sumProp;
+			map<cells, int> visitors_tmp;
+			loop v over: visitors.keys {
+				if (v.level != 0) {
+					visitors_tmp[v] <-  visitors[v];
+				}
+			}
+			visitors <- visitors_tmp;
 	
-	action init_nb_habitants {
+		}
+		loop ori over: visitors.keys {
+			int nbV <- visitors[ori];
+			loop ce over:propCells.keys {
+				int n <- round(propCells[ce] * nbV);
+				if (n > 0) {
+					ce.visitors[ori] <- ce.visitors[ori] + n;
+				}
+				
+			}	
+		}
+		
+	}
+	
+	action init_nb_habitants_meso {
 		int nb_cells <- nbCellsHeight * nbCellsWidth;
 		map<string,int> nb_type_meso;
-		
+	//	nbInhabitants <- 0;
 		loop t over: mesoCellsProportions.keys {
 			list<int> prop <- mesoCellsProportions[t];
 			int tot <- sum(prop);
 			int nb <- 0;
 			loop tt over: densityPeoplePerType.keys {
-				nb <- nb + int(densityPeoplePerType[tt] * nb_cells * prop[microCellsTypes index_of tt]/ tot);
+				nb <- nb + int(world.nb_per_types(tt, macroCellWidth/nbCellsWidth/nbCellsWidth, macroCellHeight / nbCellsHeight / nbCellsHeight) * nb_cells * prop[microCellsTypes index_of tt]/ tot);
 			}
 			
 			nb_type_meso[t] <- nb;
 		}
+		map<mesoCell,float> propCells;
+		float sumProp;
 		ask mesoCell {
 			nbInhabitants <- nb_type_meso[type];
+			//myself.nbInhabitants <- myself.nbInhabitants + nbInhabitants;
 		}
+		do distribute_visitors;
 		
 	}
 	
@@ -363,34 +494,71 @@ species macroCell parent: cells{
 			do die;
 		}
 		geometry s <- rectangle(width,height);
-		
 		list<macroConnection> mcs <- macroConnection overlapping s;
-		if (not empty(mcs)) {
-			list<geometry> lines <- [];
-			map<geometry, macroConnection> linkToMacro;
-			loop mc over: mcs {
-				list<geometry> ls <- generate_lines(mc, s);
-				loop l over: ls {
-					linkToMacro[l] <- mc;
+		
+		if(not empty(mcs) or not empty(buildMesoConnexions)) {
+			graph g <- generate_basic_graph(s);
+			if (not empty(mcs)) {
+				list<geometry> lines <- [];
+				map<geometry, macroConnection> linkToMacro;
+				loop mc over: mcs {
+					list<geometry> ls <- generate_lines(mc, s, g);
+					loop l over: ls {
+						linkToMacro[l] <- mc;
+					}
+					lines <- lines + ls;
 				}
-				lines <- lines + ls;
+				lines <- remove_duplicates(lines);
+				create mesoConnection from: lines {
+					myMacroConnection <- linkToMacro[shape];
+				}
 			}
-			lines <- remove_duplicates(lines);
-			create mesoConnection from: lines {
-				myMacroConnection <- linkToMacro[shape];
+			loop p over: buildMesoConnexions {
+				path the_path <- g path_between(p.key, p.value);
+				if (the_path != nil ) {
+					create mesoConnection from: the_path.edges ;
+				}
+			}
+			do connect_meso_cells;
+			
+		} 
+	}
+	
+	action connect_meso_cells {
+		ask mesoCell {
+			connectedCells <- [];
+		}
+		float dist <- sqrt((macroCellWidth/nbCellsWidth) ^2 + (macroCellHeight/nbCellsHeight)^2)  * 1.1;
+			
+		if (neighbors_connection) {
+			float dist <- sqrt((macroCellWidth/nbCellsWidth) ^2 + (macroCellHeight/nbCellsHeight)^2)  * 1.1;
+			ask mesoCell {
+				connectedCells <- mesoCell at_distance dist;
+			}
+			
+		}
+		graph the_graph <- as_edge_graph(mesoConnection);
+		map<point,list<mesoCell>> connections;
+		dist <- dist / 2.0;
+		loop v over: the_graph.vertices {
+			connections[v.location] <- mesoCell where (each distance_to v < dist);
+		} 
+		list<list> connected_components <- connected_components_of(the_graph, false);
+		loop cc over: connected_components {
+			list<mesoCell> ms <- remove_duplicates(cc accumulate connections[geometry(each).location]);
+			ask ms {
+				connectedCells <- copy(neighbors_connection ? remove_duplicates(ms + connectedCells): ms );
+				connectedCells >> self;
 			}
 		}
 	}
 	
-	list<geometry> generate_lines(macroConnection mc, geometry s) {
-		geometry ov <- mc inter s;
-		point origin <- first(ov.points);
-		point dest <- last(ov.points);
+	graph generate_basic_graph (geometry bounds_g){
 		list<geometry> lines;
 		float w <- width/nbCellsWidth;
 		float h <- height/nbCellsHeight;
-		float min_x <- s.points min_of each.x;
-		float min_y <- s.points min_of each.y;
+		float min_x <- bounds_g.points min_of each.x;
+		float min_y <- bounds_g.points min_of each.y;
 		loop i from: 0 to: nbCellsWidth {
 				lines << line([{i*w+ min_x,min_y}, {i*w+min_x,height+min_y}]);
 			}
@@ -399,6 +567,15 @@ species macroCell parent: cells{
 		}
 		lines <- split_lines(lines);
 		graph g <- as_edge_graph(lines);
+		return g;
+		
+	}
+	
+	
+	list<geometry> generate_lines(macroConnection mc, geometry bounds_g, graph g) {
+		geometry ov <- mc inter bounds_g;
+		point origin <- first(ov.points);
+		point dest <- last(ov.points);
 		path p <- g path_between(origin, dest);
 		if (p != nil ) {
 			return p.edges;
@@ -484,8 +661,13 @@ species mesoCell parent:cells{
 	user_command "Local Educational"action: localModifyToEducational;
 	user_command "Local Park"action: localModifyToPark;
 	user_command "Local Lake"action: localModifyToLake;
+
+		
+	int nb_cycles_returning <- 5;
+	int nb_cycles_moving <- 50;
 	
 	macroCell parentCell;
+	
 	
 	
 	action generateMicro {
@@ -513,8 +695,7 @@ species mesoCell parent:cells{
 		do applyChanges;
 		
 		ask microCell {
-			nbInhabitants <- round(width/nbCellsWidth/#km * height/nbCellsWidth/#km * densityPeoplePerType[type]);
-			myself.nbInhabitants <- myself.nbInhabitants + nbInhabitants;
+			nbInhabitants <- world.nb_per_types(type,width,height);
 			create people number: nbInhabitants with: [location::location]{
 				origin <- myself;
 				list_of_people << self;
@@ -522,7 +703,27 @@ species mesoCell parent:cells{
 				map<profile, float> prof_pro <- proportions_per_bd_type[one_of(proportions_per_bd_type.keys)];
 				my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
 			}
+			myself.nbInhabitants <- myself.nbInhabitants + nbInhabitants;
 		}
+		
+		loop ori over: visitors.keys {
+			int nbV <- visitors[ori];
+			loop times: nbV {
+				create people  {
+					origin <- one_of(microCell);
+					location<- origin.location;
+					list_of_people << self;
+					visitor_level <- ori.level;
+					visitor_ori <- ori;
+					list_of_people << self;
+					do reinit_destination;
+					map<profile, float> prof_pro <- proportions_per_bd_type[one_of(proportions_per_bd_type.keys)];
+					my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
+				}
+			}
+		}
+		
+		
 		
 	}
 
@@ -646,7 +847,7 @@ species mesoCell parent:cells{
 }
 
 species microCell parent:cells{
-	int level <- 3;
+	int level <- 2;
 	int index -> int(self) - int(first(microCell));
 	
 	user_command "save Meso State"action: saveMesoState;
@@ -741,6 +942,8 @@ species changeLog{
 
 
 species people parent: basic_people skills: [moving]{
+	int visitor_level <- -1;
+	cells visitor_ori;
 	action reinit_destination {
 		dest <-one_of(microCell);
 		target <- nil;
@@ -765,7 +968,8 @@ experiment REGICID autorun: true{
 		display meso type:opengl draw_env:false  camera_interaction:false camera_pos:  currentMacro = nil ?  {world.location.x, world.location.y, world.shape.width/(nbCellsWidth*0.8)} : {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  currentMacro = nil ? world.location :{currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
 			species mesoConnection;
-			event mouse_down action: activateMeso; 			
+			event mouse_down action: activateMeso; 	
+			event "r" action: create_connection_meso; 		
 		}
 
 		display micro type:opengl synchronized: true draw_env:false z_near: world.shape.width / 1000  camera_interaction:false camera_pos: currentMeso = nil ? {world.location.x, world.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} : {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  currentMeso = nil ? world.location : {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
