@@ -1,6 +1,6 @@
 /***
 * Name: Regicid REGIonal CIty District
-* Author: Arno
+* Author: Arno, Patrick
 * Description: 
 * Tags: Tag1, Tag2, TagN
 ***/
@@ -11,25 +11,23 @@ model Regicid
 
 import "common model.gaml"
 global{
-	int nbCellsWidth<-10;
-	int nbCellsHeight<-10;
-	float macroCellWidth<-100#km;
-	float macroCellHeight<-100#km;
+	bool randomInit <- false;
+	bool loadShapefile <- false;
 	bool neighbors_connection <- false;
-	int global_people_size <-400;
+	int global_people_size <-20;
 	cells currentMacro;
 	cells currentMeso;
-	
 	bool creating_connection <- false;
 	
 	macroCell currentMacro_tmp;
 	mesoCell currentMeso_tmp;
 	float prop_returning <- 0.1;
-	map<string, float> prop_macro_to_move_to <- ["City"::0.05, "Village"::0.02, "Park"::0.02,"Lake"::0.01];
+	map<string, float> prop_macro_to_move_to <- ["Urban hi-density"::0.05, "Urban low-density"::0.02, "Countryside"::0.02,"Water"::0.01,"Empty"::0.0];
 	map<string, float> prop_meso_to_move_to <- ["Residential"::0.01, "Commercial"::0.05, "Industrial"::0.02, "Educational"::0.02, "Park"::0.02,"Lake"::0.01];
 	
-	list<string> macroCellsTypes <- ["City", "Village", "Park","Lake"];
-	map<string, rgb> macroCellsColors <- ["City"::#gamaorange, "Village"::#gamared, "Park"::#green,"Lake"::#blue];
+	list<string> macroCellsTypes <- ["Urban hi-density", "Urban low-density", "Countryside","Water", "Empty"];
+	map<string,string> oldToNew <- ["City"::"Urban hi-density", "Village"::"Urban low-density", "Park"::"Countryside","Lake"::"Water"];
+	map<string, rgb> macroCellsColors <- ["Urban hi-density"::#gamaorange, "Urban low-density"::#gamared, "Countryside"::#green,"Water"::#blue, "Empty"::#white];
 	
 	list<string> mesoCellsTypes <- ["Residential", "Commercial", "Industrial", "Educational", "Park","Lake"];
 	map<string, rgb> mesoCellsColors <- ["Residential"::#gamared, "Commercial"::#gamablue, "Industrial"::#gamaorange, "Educational"::#white, "Park"::#green,"Lake"::#blue];
@@ -38,60 +36,99 @@ global{
 	list<string> microCellsTypes <- ["Residential", "Commercial", "Industrial", "Educational", "Park","Lake"];
 	map<string, rgb> microCellsColors <- ["Residential"::#gamared, "Commercial"::#gamablue, "Industrial"::#gamaorange, "Educational"::#white, "Park"::#green,"Lake"::#blue];
 	
-	map<string, list<int>> macroCellsProportions <- ["City"::[30,30,30,10,10,5], "Village"::[10,7,5,5,50,10], "Park"::[3,3,0,0,85,10],"Lake"::[5,0,0,0,5,100]];
+	map<string, list<int>> macroCellsProportions <- ["Urban hi-density"::[30,30,30,10,10,5], "Urban low-density"::[10,7,5,5,50,10], "Countryside"::[3,3,0,0,85,10],"Water"::[5,0,0,0,5,100],"Empty"::[0,0,0,0,0,0]];
 	map<string, list<int>> mesoCellsProportions <- ["Residential"::[70,5,0,5,20,5], "Commercial"::[10,80,0,5,20,0], "Industrial"::[5,5,90,0,0,0], "Educational"::[10,10,0,70,25,0], "Park"::[10,5,0,0,70,20],"Lake"::[5,5,0,0,5,80]];
 	map<string, float> densityPeoplePerType <-["Residential"::2000.0, "Commercial"::400.0, "Industrial"::200.0, "Educational"::1000.0, "Park"::200.0,"Lake"::0.0];
 	
-	
+	list<macroCell> activeMacroCells;
 	float building_scale parameter: 'cell scale:' category: 'cell Aspect' <- 0.8 min: 0.2 max: 1.0; 
 	
 	// for the RNG
 	float a <- 25214903917.0;
 	float c <- 11.0;
 	float m <- 2^48;
-	geometry shape <-rectangle(nbCellsWidth*macroCellWidth, nbCellsHeight*macroCellHeight);
+	
+	shape_file macroShapefile ;
+	float macroCellWidth<-10#km;
+	float macroCellHeight<-10#km;
+	int nbCellsWidth<- 10;
+	int nbCellsHeight<-10;
+	geometry shape <- loadShapefile ? envelope(macroShapefile) : rectangle(nbCellsWidth*macroCellWidth, nbCellsHeight*macroCellHeight);
+	
+	
+	float coeffCamera <- shape.width/ #km;
 	file imageRaster <- file('./../images/Kent_Sketches.png');
-	float step <- macroCellWidth/nbCellsWidth /2000.0 ;
+	float step <- shape.width/20000.0 ;
 	
 	init{
-		//do createRandomGrid;
-		do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
+		if (loadShapefile) {
+			macroCellWidth<-first(macroShapefile).width;
+			macroCellHeight<-first(macroShapefile).height;
+			nbCellsWidth<- round(envelope(macroShapefile).width / macroCellWidth);
+			nbCellsHeight<-round(envelope(macroShapefile).height / macroCellHeight);
+	
+		}
+			//
+		if(loadShapefile) {
+			do load_macro_gis;
+		} else if (randomInit){
+			do createRandomGrid;
+		} else {
+			do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
+		}
+		activeMacroCells <- macroCell where (each.type != "Empty");
 		do load_profiles;
 		do init_nb_habitants;
 		if (neighbors_connection) {
 			float dist <- sqrt((macroCellWidth) ^2 + (macroCellHeight)^2)  * 1.1;
-			ask macroCell {
-				connectedCells <- macroCell at_distance dist;
+			ask activeMacroCells {
+				connectedCells <- activeMacroCells at_distance dist;
 			}
 			
 		}
 		
 	}
+	
+	int compute_total_number(list<cells> ces) {
+		return (ces sum_of each.nbInhabitants) + ces sum_of (sum(each.visitors.values)) ;
+	}
+	
+	/*reflex debug {
+		write "total macro: " + compute_total_number(macroCell as list) + " total meso:" + compute_total_number(mesoCell as list) + 
+		" theorique meso: " + (currentMeso = nil ? 0 : compute_total_number([currentMeso])) + " nb people: " + length(people) ;
+		
+	}*/
 	action init_nb_habitants {
 		int nb_cells <- nbCellsHeight * nbCellsWidth;
-		map<string,int> nb_type_meso;
+		map<string,int> nb_type_macro;
 		
-		loop t over: mesoCellsProportions.keys {
-			list<int> prop <- mesoCellsProportions[t];
-			int tot <- sum(prop);
-			int nb <- 0;
-			loop tt over: densityPeoplePerType.keys {
-				nb <- nb + int(world.nb_per_types(tt, macroCellWidth/nbCellsWidth/nbCellsWidth, macroCellHeight / nbCellsHeight / nbCellsHeight) * nb_cells * prop[microCellsTypes index_of tt]/ tot);
+		loop t over: macroCellsProportions.keys {
+			if t = "Empty"{
+				nb_type_macro[t] <- 0;
+			} else {
+				
+				list<int> prop <- macroCellsProportions[t];
+				int tot <- sum(prop);
+				int nb <- 0;
+				loop i from: 0 to: length(mesoCellsTypes) - 1{
+					nb <- nb + compute_nb_meso_habitants(mesoCellsTypes[i]) * prop[i];
+				}
+				nb <- int(nb / tot * nb_cells);
+				nb_type_macro[t] <- nb;
 			}
-			
-			nb_type_meso[t] <- nb;
 		}
-		ask macroCell {
-			list<int> prop <- macroCellsProportions[type];
-			int tot <- sum(prop);
-			int nb;
-			loop t over: nb_type_meso.keys {
-				nbInhabitants <- nbInhabitants + int(nb_type_meso[t] * nb_cells * prop[mesoCellsTypes index_of t]/ tot);
-			}
-			
-		
+		ask activeMacroCells {
+			nbInhabitants <- nb_type_macro[type];
 		}
 		
+	}
+	action load_macro_gis{
+		create macroCell from: macroShapefile.contents where (each != nil and not empty(each.points) and each.area > 100) with: [type::get("Type")]{
+			shape <- copy(location);
+			width<-macroCellWidth;
+			height<-macroCellHeight;
+			seed <- float(rnd(1000000));
+		}	
 	}
 	action load_macro_grid(string path_to_file) {
 		file my_csv_file <- csv_file(path_to_file,",");
@@ -104,6 +141,9 @@ global{
 					location<-{width*i+width/2,height*j+height/2};
 					seed <- float(rnd(1000000));
 					type <- string(data[i, j]);
+					if not(type in macroCellsTypes ) {
+						type <- oldToNew[type];
+					}
 				}
 			}
 		}	
@@ -141,8 +181,11 @@ global{
 	
 	action create_connection_macro {
 		ask (macroCell closest_to #user_location) {
-			creating_connection <- true;
-			origin_creation<- true;
+			if (type != "Empty") {
+				creating_connection <- true;
+				origin_creation<- true;
+			}
+			
 		}
 	}
 	
@@ -155,22 +198,28 @@ global{
 	action activateMacro {
 		if (creating_connection) {
 			macroCell dest <- (macroCell closest_to  #user_location);
-			macroCell ori <- macroCell first_with each.origin_creation;
-			if (dest != ori) {
-				create macroConnection with: [shape::line([ori, dest])];
-				dest.connectedCells << ori;
-				ori.connectedCells << dest;
-			} 
-			creating_connection <- false;
-			ori.origin_creation <- false;
-			if (currentMacro != nil) {
-				ask macroCell(currentMacro) {
-					do generate_meso_connexions;
+			if (dest.type != "Empty") {
+				macroCell ori <- macroCell first_with each.origin_creation;
+				if (dest != ori) {
+					create macroConnection with: [shape::line([ori, dest])];
+					dest.connectedCells << ori;
+					ori.connectedCells << dest;
+				} 
+				creating_connection <- false;
+				ori.origin_creation <- false;
+				if (currentMacro != nil) {
+					ask macroCell(currentMacro) {
+						do generate_meso_connexions;
+					}
 				}
+				
 			}
 			
 		} else {
-			currentMacro_tmp <- (macroCell closest_to  #user_location);
+			 macroCell mc <- (macroCell closest_to  #user_location);
+			 if (mc.type != "Empty") {
+			 	 currentMacro_tmp <- mc;
+			 }
 		}
 	}	
 	action activateMeso {
@@ -199,9 +248,20 @@ global{
 	}
 	
 	int nb_per_types(string ty, float w, float h) {
-		return round(w/nbCellsWidth/#km * h/nbCellsWidth/#km * densityPeoplePerType[ty]);
+		return round(w/#km * h/#km * densityPeoplePerType[ty]);
 	}
 	
+	int compute_nb_meso_habitants(string t) {
+		int nb_cells <- nbCellsHeight * nbCellsWidth;
+		list<int> prop <- mesoCellsProportions[t];
+		int tot <- sum(prop);
+		
+		int nb <- 0;
+		loop tt over: densityPeoplePerType.keys {
+			nb <- nb + int(world.nb_per_types(tt, macroCellWidth/nbCellsWidth/nbCellsWidth, macroCellHeight / nbCellsHeight / nbCellsHeight) * nb_cells * prop[microCellsTypes index_of tt]/ tot);
+		}	
+		return nb;
+	}
 }
 
 species cells parent: poi{
@@ -339,10 +399,10 @@ species cells parent: poi{
 	}
 	
 	aspect macroTable{
-		draw rectangle(width,height) depth:nbInhabitants*10  color:macroCellsColors[type] border:macroCellsColors[type]+25;
-		float d <- nbInhabitants*10.0;
+		draw rectangle(width,height) depth:nbInhabitants /1 color:macroCellsColors[type] border:macroCellsColors[type]+25;
+		float d <- nbInhabitants/1.0;
 		loop v over: visitors.keys {
-			float nb <- visitors[v]*10.0;
+			float nb <- visitors[v]*1.0;
 			draw box(width* 0.8,height * 0.8,nb) at: location + {0,0,d} color:v.color border:#black;
 			d <- d + nb;
 		}
@@ -350,12 +410,12 @@ species cells parent: poi{
 	}
 	
 	aspect mesoTable{
-		draw rectangle(width*nbCellsWidth * building_scale,height*nbCellsHeight* building_scale) depth:nbInhabitants * 100.0 color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight};
-		int d <- nbInhabitants * 100;
+		draw rectangle(width*nbCellsWidth * building_scale,height*nbCellsHeight* building_scale) depth:nbInhabitants * 10.0 color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight};
+		int d <- nbInhabitants * 10;
 		list<cells> vs <-  visitors.keys sort_by each.level;
 		loop v over: vs {
 			float sc <- v.level = 0 ? 0.8 : 0.5;
-			int nb <- visitors[v] * 100;
+			int nb <- visitors[v] * 10;
 			draw box(width*nbCellsWidth * building_scale * sc,height*nbCellsHeight* building_scale *sc,nb) at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight,d} color:v.color border:#black;
 			d <- d + nb;
 		}
@@ -379,11 +439,11 @@ species connection{
 }
 
 species macroConnection parent: connection{
-	float coeff <- 10.0 #km;
+	float coeff <- world.shape.width/100.0;
 }
 
 species mesoConnection parent: connection{
-	float coeff <- 1.0 #km;
+	float coeff <-world.shape.width/1000.0;
 	rgb color <- #red;
 	macroConnection myMacroConnection;
 }
@@ -465,26 +525,13 @@ species macroCell parent: cells{
 		
 	}
 	
-	action init_nb_habitants_meso {
-		int nb_cells <- nbCellsHeight * nbCellsWidth;
-		map<string,int> nb_type_meso;
-	//	nbInhabitants <- 0;
-		loop t over: mesoCellsProportions.keys {
-			list<int> prop <- mesoCellsProportions[t];
-			int tot <- sum(prop);
-			int nb <- 0;
-			loop tt over: densityPeoplePerType.keys {
-				nb <- nb + int(world.nb_per_types(tt, macroCellWidth/nbCellsWidth/nbCellsWidth, macroCellHeight / nbCellsHeight / nbCellsHeight) * nb_cells * prop[microCellsTypes index_of tt]/ tot);
-			}
-			
-			nb_type_meso[t] <- nb;
-		}
-		map<mesoCell,float> propCells;
-		float sumProp;
+	action compute_nb_meso_habitants {
 		ask mesoCell {
-			nbInhabitants <- nb_type_meso[type];
-			//myself.nbInhabitants <- myself.nbInhabitants + nbInhabitants;
+			nbInhabitants <- world.compute_nb_meso_habitants(type);
 		}
+	}
+	action init_nb_habitants_meso {
+		do compute_nb_meso_habitants;
 		do distribute_visitors;
 		
 	}
@@ -705,7 +752,6 @@ species mesoCell parent:cells{
 				map<profile, float> prof_pro <- proportions_per_bd_type[one_of(proportions_per_bd_type.keys)];
 				my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
 			}
-			myself.nbInhabitants <- myself.nbInhabitants + nbInhabitants;
 		}
 		
 		loop ori over: visitors.keys {
@@ -954,6 +1000,25 @@ species people parent: basic_people skills: [moving]{
 	
 	
 }
+
+experiment REGICID_FRANCE parent: REGICID autorun: true{
+	action _init_ {
+	
+		map<string, float> densityPeoplePerTypeG <-["Residential"::20.0, "Commercial"::5.0, "Industrial"::2.0, "Educational"::10.0, "Park"::2.0,"Lake"::0.0];
+		create simulation with: [global_people_size:: 400, loadShapefile:: true, densityPeoplePerType::densityPeoplePerTypeG, macroShapefile :: shape_file("../includes/GIS/France_squares.shp")];
+	}
+	output{
+		display macro  type:opengl draw_env:false camera_interaction:false{
+			image "../includes/GIS/France.png" refresh: false;
+			species macroCell aspect:macro transparency: 0.5;
+			species macroConnection;
+			event mouse_down action: activateMacro; 
+			event "r" action: create_connection_macro; 
+		}
+		
+		
+	}
+}
 experiment REGICID autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	output{
@@ -984,7 +1049,7 @@ experiment REGICID autorun: true{
 			
 		}
 		
-		display table type:opengl background:#white draw_env:true  camera_pos: {1848.6801 * 1000,2083.7744 * 1000,2369.1066 * 1000} camera_look_pos: {1848.6801 * 1000,547.195 * 1000,3.0723 * 1000} camera_up_vector: {0.0,0.8387,0.5447}
+		display table type:opengl background:#white draw_env:true  camera_pos: {1848.6801 * coeffCamera,2083.7744 * coeffCamera,2369.1066 * coeffCamera} camera_look_pos: {1848.6801 * coeffCamera,547.195 * coeffCamera,3.0723 * coeffCamera} camera_up_vector: {0.0,0.8387,0.5447}
 		{
 			species macroCell aspect:macroTable;
 			species mesoCell aspect:mesoTable;
