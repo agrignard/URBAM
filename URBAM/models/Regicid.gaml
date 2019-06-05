@@ -754,14 +754,15 @@ experiment REGICID autorun: true{
 		//editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
 		
 
-		display macro  type:opengl draw_env:true{
+		display macro  type:opengl draw_env:false camera_interaction:false{
 			species macroCell aspect:macro;
 			species macroConnection;
 			event mouse_down action: activateMacro; 
 			event "r" action: create_connection_macro; 
 			
+				
 		}
-		display meso type:opengl draw_env:false  camera_pos:  currentMacro = nil ?  {world.location.x, world.location.y, world.shape.width/(nbCellsWidth*0.8)} : {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  currentMacro = nil ? world.location :{currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display meso type:opengl draw_env:false  camera_interaction:false camera_pos:  currentMacro = nil ?  {world.location.x, world.location.y, world.shape.width/(nbCellsWidth*0.8)} : {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  currentMacro = nil ? world.location :{currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
 			species mesoConnection;
 			event mouse_down action: activateMeso; 			
@@ -773,7 +774,7 @@ experiment REGICID autorun: true{
 			species people;	 
 		}
 		
-		display table type:opengl background:#white draw_env:true camera_pos: {1848.6801 * 1000,2083.7744 * 1000,2369.1066 * 1000} camera_look_pos: {1848.6801 * 1000,547.195 * 1000,3.0723 * 1000} camera_up_vector: {0.0,0.8387,0.5447}
+		display table type:opengl background:#white draw_env:true  camera_pos: {1848.6801 * 1000,2083.7744 * 1000,2369.1066 * 1000} camera_look_pos: {1848.6801 * 1000,547.195 * 1000,3.0723 * 1000} camera_up_vector: {0.0,0.8387,0.5447}
 		{
 			species macroCell aspect:macroTable;
 			species mesoCell aspect:mesoTable;
@@ -784,13 +785,10 @@ experiment REGICID autorun: true{
 				draw box(nbCellsWidth*macroCellWidth,nbCellsHeight*macroCellHeight,world.shape.width*0.25) color:#black at:{world.shape.width*3.5,world.shape.height/2,-world.shape.width*0.26} empty:true;
 			}
 			graphics "text" {
-				draw rectangle(525#px,525#px) rotated_by (90,{1,0,0}) color:#black  at: {world.shape.width*2, -world.shape.width*0.11,world.shape.width*0.5};
-				draw rectangle(500#px,500#px) rotated_by (90,{1,0,0}) texture:[imageRaster.path]  at: {world.shape.width*2, -world.shape.width*0.1,world.shape.width*0.5};
-			}
+				draw rectangle(525#px,525#px) rotated_by (89,{1,0,0}) color:#black  at: {world.shape.width*2, -world.shape.width*0.11,world.shape.width} ;
+				draw rectangle(500#px,500#px) rotated_by (89,{1,0,0}) texture:[imageRaster.path] at: {world.shape.width*2, -world.shape.width*0.1,world.shape.width};
+			} 
 		}
-		
-		
-		
 	}
 	
 }
