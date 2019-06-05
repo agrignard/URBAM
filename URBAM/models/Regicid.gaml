@@ -25,11 +25,11 @@ global{
 	macroCell currentMacro_tmp;
 	mesoCell currentMeso_tmp;
 	float prop_returning <- 0.1;
-	map<string, float> prop_macro_to_move_to <- ["City"::0.05, "Village"::0.02, "Park"::0.02,"Lake"::0.01];
+	map<string, float> prop_macro_to_move_to <- ["Urban hi-density"::0.05, "Urban low-density"::0.02, "Countryside"::0.02,"Water"::0.01,"Empty"::0.0];
 	map<string, float> prop_meso_to_move_to <- ["Residential"::0.01, "Commercial"::0.05, "Industrial"::0.02, "Educational"::0.02, "Park"::0.02,"Lake"::0.01];
 	
-	list<string> macroCellsTypes <- ["City", "Village", "Park","Lake"];
-	map<string, rgb> macroCellsColors <- ["City"::#gamaorange, "Village"::#gamared, "Park"::#green,"Lake"::#blue];
+	list<string> macroCellsTypes <- ["Urban hi-density", "Urban low-density", "Countryside","Water", "Empty"];
+	map<string, rgb> macroCellsColors <- ["Urban hi-density"::#gamaorange, "Urban low-density"::#gamared, "Countryside"::#green,"Water"::#blue, "Empty"::#white];
 	
 	list<string> mesoCellsTypes <- ["Residential", "Commercial", "Industrial", "Educational", "Park","Lake"];
 	map<string, rgb> mesoCellsColors <- ["Residential"::#gamared, "Commercial"::#gamablue, "Industrial"::#gamaorange, "Educational"::#white, "Park"::#green,"Lake"::#blue];
@@ -38,11 +38,11 @@ global{
 	list<string> microCellsTypes <- ["Residential", "Commercial", "Industrial", "Educational", "Park","Lake"];
 	map<string, rgb> microCellsColors <- ["Residential"::#gamared, "Commercial"::#gamablue, "Industrial"::#gamaorange, "Educational"::#white, "Park"::#green,"Lake"::#blue];
 	
-	map<string, list<int>> macroCellsProportions <- ["City"::[30,30,30,10,10,5], "Village"::[10,7,5,5,50,10], "Park"::[3,3,0,0,85,10],"Lake"::[5,0,0,0,5,100]];
+	map<string, list<int>> macroCellsProportions <- ["Urban hi-density"::[30,30,30,10,10,5], "Urban low-density"::[10,7,5,5,50,10], "Countryside"::[3,3,0,0,85,10],"Water"::[5,0,0,0,5,100],"Empty"::[0,0,0,0,0,0]];
 	map<string, list<int>> mesoCellsProportions <- ["Residential"::[70,5,0,5,20,5], "Commercial"::[10,80,0,5,20,0], "Industrial"::[5,5,90,0,0,0], "Educational"::[10,10,0,70,25,0], "Park"::[10,5,0,0,70,20],"Lake"::[5,5,0,0,5,80]];
 	map<string, float> densityPeoplePerType <-["Residential"::2000.0, "Commercial"::400.0, "Industrial"::200.0, "Educational"::1000.0, "Park"::200.0,"Lake"::0.0];
 	
-	
+	list<macroCell> activeMacroCells;
 	float building_scale parameter: 'cell scale:' category: 'cell Aspect' <- 0.8 min: 0.2 max: 1.0; 
 	
 	// for the RNG
@@ -54,14 +54,16 @@ global{
 	float step <- macroCellWidth/nbCellsWidth /2000.0 ;
 	
 	init{
-		//do createRandomGrid;
-		do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
+		do createRandomGrid;
+		
+		//do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
+		activeMacroCells <- macroCell where (each.type != "Empty");
 		do load_profiles;
 		do init_nb_habitants;
 		if (neighbors_connection) {
 			float dist <- sqrt((macroCellWidth) ^2 + (macroCellHeight)^2)  * 1.1;
-			ask macroCell {
-				connectedCells <- macroCell at_distance dist;
+			ask activeMacroCells {
+				connectedCells <- activeMacroCells at_distance dist;
 			}
 			
 		}
@@ -82,16 +84,21 @@ global{
 		map<string,int> nb_type_macro;
 		
 		loop t over: macroCellsProportions.keys {
-			list<int> prop <- macroCellsProportions[t];
-			int tot <- sum(prop);
-			int nb <- 0;
-			loop i from: 0 to: length(mesoCellsTypes) - 1{
-				nb <- nb + compute_nb_meso_habitants(mesoCellsTypes[i]) * prop[i];
+			if t = "Empty"{
+				nb_type_macro[t] <- 0;
+			} else {
+				
+				list<int> prop <- macroCellsProportions[t];
+				int tot <- sum(prop);
+				int nb <- 0;
+				loop i from: 0 to: length(mesoCellsTypes) - 1{
+					nb <- nb + compute_nb_meso_habitants(mesoCellsTypes[i]) * prop[i];
+				}
+				nb <- int(nb / tot * nb_cells);
+				nb_type_macro[t] <- nb;
 			}
-			nb <- int(nb / tot * nb_cells);
-			nb_type_macro[t] <- nb;
 		}
-		ask macroCell {
+		ask activeMacroCells {
 			nbInhabitants <- nb_type_macro[type];
 		}
 		
@@ -144,8 +151,11 @@ global{
 	
 	action create_connection_macro {
 		ask (macroCell closest_to #user_location) {
-			creating_connection <- true;
-			origin_creation<- true;
+			if (type != "Empty") {
+				creating_connection <- true;
+				origin_creation<- true;
+			}
+			
 		}
 	}
 	
@@ -158,22 +168,28 @@ global{
 	action activateMacro {
 		if (creating_connection) {
 			macroCell dest <- (macroCell closest_to  #user_location);
-			macroCell ori <- macroCell first_with each.origin_creation;
-			if (dest != ori) {
-				create macroConnection with: [shape::line([ori, dest])];
-				dest.connectedCells << ori;
-				ori.connectedCells << dest;
-			} 
-			creating_connection <- false;
-			ori.origin_creation <- false;
-			if (currentMacro != nil) {
-				ask macroCell(currentMacro) {
-					do generate_meso_connexions;
+			if (dest.type != "Empty") {
+				macroCell ori <- macroCell first_with each.origin_creation;
+				if (dest != ori) {
+					create macroConnection with: [shape::line([ori, dest])];
+					dest.connectedCells << ori;
+					ori.connectedCells << dest;
+				} 
+				creating_connection <- false;
+				ori.origin_creation <- false;
+				if (currentMacro != nil) {
+					ask macroCell(currentMacro) {
+						do generate_meso_connexions;
+					}
 				}
+				
 			}
 			
 		} else {
-			currentMacro_tmp <- (macroCell closest_to  #user_location);
+			 macroCell mc <- (macroCell closest_to  #user_location);
+			 if (mc.type != "Empty") {
+			 	 currentMacro_tmp <- mc;
+			 }
 		}
 	}	
 	action activateMeso {
