@@ -339,7 +339,7 @@ species cells parent: poi{
 	}
 	
 	aspect macroTable{
-		draw rectangle(width,height) depth:nbInhabitants *10 color:macroCellsColors[type] border:macroCellsColors[type]+25;
+		draw rectangle(width,height) depth:nbInhabitants*10  color:macroCellsColors[type] border:macroCellsColors[type]+25;
 		float d <- nbInhabitants*10.0;
 		loop v over: visitors.keys {
 			float nb <- visitors[v]*10.0;
@@ -991,8 +991,12 @@ experiment REGICID autorun: true{
 			species microCell aspect:microTable;
 			graphics 'table'{
 				draw box(nbCellsWidth*macroCellWidth,nbCellsHeight*macroCellHeight,world.shape.width*0.25) color:#black at:{world.shape.width/2,world.shape.height/2,-world.shape.width*0.26} empty:true;
+				
 				draw box(nbCellsWidth*macroCellWidth,nbCellsHeight*macroCellHeight,world.shape.width*0.25) color:#black at:{world.shape.width*2,world.shape.height/2,-world.shape.width*0.26} empty:true;
+				draw rectangle(nbCellsWidth*macroCellWidth,nbCellsHeight*macroCellHeight) color:macroCellsColors[currentMacro.type] at:{world.shape.width*2,world.shape.height/2,-1#px};
+				
 				draw box(nbCellsWidth*macroCellWidth,nbCellsHeight*macroCellHeight,world.shape.width*0.25) color:#black at:{world.shape.width*3.5,world.shape.height/2,-world.shape.width*0.26} empty:true;
+				draw rectangle(nbCellsWidth*macroCellWidth,nbCellsHeight*macroCellHeight) color:mesoCellsColors[currentMeso.type] at:{world.shape.width*3.5,world.shape.height/2,-1#px};
 			}
 			graphics "text" {
 				draw rectangle(525#px,525#px) rotated_by (89,{1,0,0}) color:#black  at: {world.shape.width*2, -world.shape.width*0.11,world.shape.width} ;
