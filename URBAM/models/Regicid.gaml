@@ -135,6 +135,20 @@ global{
 			}
 		}
 	}
+	
+	action create_connection_macro {
+		ask (macroCell closest_to #user_location) {
+			creating_connection <- true;
+			origin_creation<- true;
+		}
+	}
+	
+	action create_connection_meso {
+		ask (mesoCell closest_to #user_location) {
+			creating_connection <- true;
+			origin_creation<- true;
+		}
+	}  
 	action activateMacro {
 		if (creating_connection) {
 			macroCell dest <- (macroCell closest_to  #user_location);
@@ -155,20 +169,24 @@ global{
 		} else {
 			currentMacro_tmp <- (macroCell closest_to  #user_location);
 		}
-		
-		
 	}	
-	
-	action create_connection_macro {
-		ask (macroCell closest_to #user_location) {
-			creating_connection <- true;
-			origin_creation<- true;
-		}
-	
-		
-	} 
 	action activateMeso {
-		currentMeso_tmp <- (mesoCell closest_to #user_location);
+		if (creating_connection) {
+			mesoCell dest <- (mesoCell closest_to  #user_location);
+			mesoCell ori <- mesoCell first_with each.origin_creation;
+			if (dest != ori) {
+				ask macroCell(currentMacro) {
+					buildMesoConnexions<< pair(ori.location::dest.location);
+					do generate_meso_connexions;
+				}
+				
+			} 
+			creating_connection <- false;
+			ori.origin_creation <- false;
+			
+		} else {
+			currentMeso_tmp <- (mesoCell closest_to #user_location);
+		}
 	}	
 	
 	action clean_people_road {
@@ -269,7 +287,9 @@ species cells parent: poi{
 		} else {
 			draw rectangle(w,h) color:mesoCellsColors[type];
 		}
-		
+		if (origin_creation) {
+			draw triangle(w * 0.5) color: #pink border: #black depth: 1.5;
+		}
 	}
 	
 	aspect micro{
@@ -329,6 +349,7 @@ species macroCell parent: cells{
 	user_command "Lake"action: modifyToLake;
 	int index -> int(self) - int(first(macroCell));
 	list<macroCell> connectedCells;
+	list<pair<point,point>> buildMesoConnexions;
 	
 	reflex peopleMoving when: every(100 #cycle) and not empty(connectedCells){
 		list<float> proba <- connectedCells collect prop_macro_to_move_to[each.type];
@@ -408,32 +429,40 @@ species macroCell parent: cells{
 		geometry s <- rectangle(width,height);
 		
 		list<macroConnection> mcs <- macroConnection overlapping s;
-		if (not empty(mcs)) {
-			list<geometry> lines <- [];
-			map<geometry, macroConnection> linkToMacro;
-			loop mc over: mcs {
-				list<geometry> ls <- generate_lines(mc, s);
-				loop l over: ls {
-					linkToMacro[l] <- mc;
+		
+		if(not empty(mcs) or not empty(buildMesoConnexions)) {
+			graph g <- generate_basic_graph(s);
+			if (not empty(mcs)) {
+				list<geometry> lines <- [];
+				map<geometry, macroConnection> linkToMacro;
+				loop mc over: mcs {
+					list<geometry> ls <- generate_lines(mc, s, g);
+					loop l over: ls {
+						linkToMacro[l] <- mc;
+					}
+					lines <- lines + ls;
 				}
-				lines <- lines + ls;
+				lines <- remove_duplicates(lines);
+				create mesoConnection from: lines {
+					myMacroConnection <- linkToMacro[shape];
+				}
 			}
-			lines <- remove_duplicates(lines);
-			create mesoConnection from: lines {
-				myMacroConnection <- linkToMacro[shape];
+			loop p over: buildMesoConnexions {
+				path the_path <- g path_between(p.key, p.value);
+				if (the_path != nil ) {
+					create mesoConnection from: the_path.edges ;
+				}
 			}
 		}
+		
 	}
 	
-	list<geometry> generate_lines(macroConnection mc, geometry s) {
-		geometry ov <- mc inter s;
-		point origin <- first(ov.points);
-		point dest <- last(ov.points);
+	graph generate_basic_graph (geometry bounds_g){
 		list<geometry> lines;
 		float w <- width/nbCellsWidth;
 		float h <- height/nbCellsHeight;
-		float min_x <- s.points min_of each.x;
-		float min_y <- s.points min_of each.y;
+		float min_x <- bounds_g.points min_of each.x;
+		float min_y <- bounds_g.points min_of each.y;
 		loop i from: 0 to: nbCellsWidth {
 				lines << line([{i*w+ min_x,min_y}, {i*w+min_x,height+min_y}]);
 			}
@@ -442,6 +471,15 @@ species macroCell parent: cells{
 		}
 		lines <- split_lines(lines);
 		graph g <- as_edge_graph(lines);
+		return g;
+		
+	}
+	
+	
+	list<geometry> generate_lines(macroConnection mc, geometry bounds_g, graph g) {
+		geometry ov <- mc inter bounds_g;
+		point origin <- first(ov.points);
+		point dest <- last(ov.points);
 		path p <- g path_between(origin, dest);
 		if (p != nil ) {
 			return p.edges;
@@ -529,7 +567,6 @@ species mesoCell parent:cells{
 	user_command "Local Lake"action: localModifyToLake;
 	
 	macroCell parentCell;
-	
 	
 	action generateMicro {
 		block_size <- min([width/nbCellsWidth,height/nbCellsHeight]);
@@ -807,7 +844,8 @@ experiment REGICID autorun: true{
 		display meso type:opengl draw_env:false  camera_pos:  currentMacro = nil ?  {world.location.x, world.location.y, world.shape.width/(nbCellsWidth*0.8)} : {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  currentMacro = nil ? world.location :{currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
 			species mesoConnection;
-			event mouse_down action: activateMeso; 			
+			event mouse_down action: activateMeso; 	
+			event "r" action: create_connection_meso; 		
 		}
 
 		display micro type:opengl synchronized: true draw_env:false z_near: world.shape.width / 1000  camera_interaction:false camera_pos: currentMeso = nil ? {world.location.x, world.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} : {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  currentMeso = nil ? world.location : {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
