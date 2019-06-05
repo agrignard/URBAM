@@ -11,6 +11,7 @@ model Urbam
 import "common model.gaml"
 global{
 	int population_level <- 40 parameter: 'Population level' min: 0 max: 300 category: "General";
+	bool blackMirror parameter: 'Dark Room' category: 'Aspect' <- true;
 	
 	//SPATIAL PARAMETERS  
 	int grid_height <- 6;

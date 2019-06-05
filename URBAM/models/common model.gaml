@@ -21,7 +21,7 @@ global{
 	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
 	
 	
-	bool blackMirror parameter: 'Dark Room' category: 'Aspect' <- true;
+	
 	
 	
 	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)", "color","hide"];
