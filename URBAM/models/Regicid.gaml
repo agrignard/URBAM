@@ -16,7 +16,7 @@ global{
 	float macroCellWidth<-100#km;
 	float macroCellHeight<-100#km;
 	bool neighbors_connection <- false;
-	int global_people_size <-200;
+	int global_people_size <-400;
 	cells currentMacro;
 	cells currentMeso;
 	
@@ -693,11 +693,13 @@ species mesoCell parent:cells{
 		}
 		do generate_road;
 		do applyChanges;
-		
+		mesoCell the_meso_cell <- self;
 		ask microCell {
 			nbInhabitants <- world.nb_per_types(type,width,height);
 			create people number: nbInhabitants with: [location::location]{
 				origin <- myself;
+				visitor_ori <- the_meso_cell;
+				color <- visitor_ori.color;
 				list_of_people << self;
 				do reinit_destination;
 				map<profile, float> prof_pro <- proportions_per_bd_type[one_of(proportions_per_bd_type.keys)];
@@ -715,6 +717,7 @@ species mesoCell parent:cells{
 					list_of_people << self;
 					visitor_level <- ori.level;
 					visitor_ori <- ori;
+					color <- visitor_ori.color;
 					list_of_people << self;
 					do reinit_destination;
 					map<profile, float> prof_pro <- proportions_per_bd_type[one_of(proportions_per_bd_type.keys)];
@@ -948,6 +951,8 @@ species people parent: basic_people skills: [moving]{
 		dest <-one_of(microCell);
 		target <- nil;
 	}
+	
+	
 }
 experiment REGICID autorun: true{
 	float minimum_cycle_duration <- 0.05;
@@ -975,6 +980,7 @@ experiment REGICID autorun: true{
 			species microCell aspect:micro;
 			species road ;
 			species people;	 
+			
 		}
 		
 		display table type:opengl background:#white draw_env:true camera_pos: {1848.6801 * 1000,2083.7744 * 1000,2369.1066 * 1000} camera_look_pos: {1848.6801 * 1000,547.195 * 1000,3.0723 * 1000} camera_up_vector: {0.0,0.8387,0.5447}

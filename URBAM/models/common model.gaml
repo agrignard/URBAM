@@ -24,7 +24,7 @@ global{
 	bool blackMirror parameter: 'Dark Room' category: 'Aspect' <- true;
 	
 	
-	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)","hide"];
+	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)", "color","hide"];
 	
 	int global_people_size <-100;
 	
@@ -276,6 +276,7 @@ species basic_people skills: [moving]{
 	bool know_pev <- false;
 	bool has_car <- flip(weight_car);
 	bool has_bike <- flip(weight_bike);
+	rgb color <- rnd_color(255);
 	action choose_mobility {
 		if (origin != nil and dest != nil and my_profile != nil) {
 			float dist <- manhattan_distance(origin.location, dest.location);
@@ -362,6 +363,15 @@ species basic_people skills: [moving]{
 					
 			}
 			switch people_aspect {
+				match "color" {	
+					if (target != nil or dest = nil) {
+						if(mobility_mode ="car"){
+						  draw copy(shape_per_mode[mobility_mode])  color: color_per_mode[mobility_mode] border:color rotate:heading +90 at: location+offset;
+						}else{
+						  draw copy(shape_per_mode[mobility_mode])  color: color rotate:heading +90 at: location+offset;	
+						}
+					}	
+				}
 			   match "mode" {	
 					if (target != nil or dest = nil) {
 						if(mobility_mode ="car"){
