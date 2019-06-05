@@ -1,6 +1,6 @@
 /***
 * Name: Regicid REGIonal CIty District
-* Author: Arno
+* Author: Arno, Patrick
 * Description: 
 * Tags: Tag1, Tag2, TagN
 ***/
@@ -11,15 +11,12 @@ model Regicid
 
 import "common model.gaml"
 global{
-	int nbCellsWidth<-10;
-	int nbCellsHeight<-10;
-	float macroCellWidth<-10#km;
-	float macroCellHeight<-10#km;
+	bool randomInit <- false;
+	bool loadShapefile <- false;
 	bool neighbors_connection <- false;
 	int global_people_size <-20;
 	cells currentMacro;
 	cells currentMeso;
-	
 	bool creating_connection <- false;
 	
 	macroCell currentMacro_tmp;
@@ -29,6 +26,7 @@ global{
 	map<string, float> prop_meso_to_move_to <- ["Residential"::0.01, "Commercial"::0.05, "Industrial"::0.02, "Educational"::0.02, "Park"::0.02,"Lake"::0.01];
 	
 	list<string> macroCellsTypes <- ["Urban hi-density", "Urban low-density", "Countryside","Water", "Empty"];
+	map<string,string> oldToNew <- ["City"::"Urban hi-density", "Village"::"Urban low-density", "Park"::"Countryside","Lake"::"Water"];
 	map<string, rgb> macroCellsColors <- ["Urban hi-density"::#gamaorange, "Urban low-density"::#gamared, "Countryside"::#green,"Water"::#blue, "Empty"::#white];
 	
 	list<string> mesoCellsTypes <- ["Residential", "Commercial", "Industrial", "Educational", "Park","Lake"];
@@ -49,14 +47,35 @@ global{
 	float a <- 25214903917.0;
 	float c <- 11.0;
 	float m <- 2^48;
-	geometry shape <-rectangle(nbCellsWidth*macroCellWidth, nbCellsHeight*macroCellHeight);
+	
+	shape_file macroShapefile ;
+	float macroCellWidth<-10#km;
+	float macroCellHeight<-10#km;
+	int nbCellsWidth<- 10;
+	int nbCellsHeight<-10;
+	geometry shape <- loadShapefile ? envelope(macroShapefile) : rectangle(nbCellsWidth*macroCellWidth, nbCellsHeight*macroCellHeight);
+	
+	
+	float coeffCamera <- shape.width/ #km;
 	file imageRaster <- file('./../images/Kent_Sketches.png');
-	float step <- macroCellWidth/nbCellsWidth /2000.0 ;
+	float step <- shape.width/20000.0 ;
 	
 	init{
-		do createRandomGrid;
-		
-		//do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
+		if (loadShapefile) {
+			macroCellWidth<-first(macroShapefile).width;
+			macroCellHeight<-first(macroShapefile).height;
+			nbCellsWidth<- round(envelope(macroShapefile).width / macroCellWidth);
+			nbCellsHeight<-round(envelope(macroShapefile).height / macroCellHeight);
+	
+		}
+			//
+		if(loadShapefile) {
+			do load_macro_gis;
+		} else if (randomInit){
+			do createRandomGrid;
+		} else {
+			do load_macro_grid("./../includes/Macro_Grid_10_10.csv");
+		}
 		activeMacroCells <- macroCell where (each.type != "Empty");
 		do load_profiles;
 		do init_nb_habitants;
@@ -103,6 +122,14 @@ global{
 		}
 		
 	}
+	action load_macro_gis{
+		create macroCell from: macroShapefile.contents where (each != nil and not empty(each.points) and each.area > 100) with: [type::get("Type")]{
+			shape <- copy(location);
+			width<-macroCellWidth;
+			height<-macroCellHeight;
+			seed <- float(rnd(1000000));
+		}	
+	}
 	action load_macro_grid(string path_to_file) {
 		file my_csv_file <- csv_file(path_to_file,",");
 		matrix data <- matrix(my_csv_file);
@@ -114,6 +141,9 @@ global{
 					location<-{width*i+width/2,height*j+height/2};
 					seed <- float(rnd(1000000));
 					type <- string(data[i, j]);
+					if not(type in macroCellsTypes ) {
+						type <- oldToNew[type];
+					}
 				}
 			}
 		}	
@@ -409,11 +439,11 @@ species connection{
 }
 
 species macroConnection parent: connection{
-	float coeff <- 1.0 #km;
+	float coeff <- world.shape.width/100.0;
 }
 
 species mesoConnection parent: connection{
-	float coeff <- 0.1 #km;
+	float coeff <-world.shape.width/1000.0;
 	rgb color <- #red;
 	macroConnection myMacroConnection;
 }
@@ -970,6 +1000,25 @@ species people parent: basic_people skills: [moving]{
 	
 	
 }
+
+experiment REGICID_FRANCE parent: REGICID autorun: true{
+	action _init_ {
+	
+		map<string, float> densityPeoplePerTypeG <-["Residential"::20.0, "Commercial"::5.0, "Industrial"::2.0, "Educational"::10.0, "Park"::2.0,"Lake"::0.0];
+		create simulation with: [global_people_size:: 400, loadShapefile:: true, densityPeoplePerType::densityPeoplePerTypeG, macroShapefile :: shape_file("../includes/GIS/France_squares.shp")];
+	}
+	output{
+		display macro  type:opengl draw_env:false camera_interaction:false{
+			image "../includes/GIS/France.png" refresh: false;
+			species macroCell aspect:macro transparency: 0.5;
+			species macroConnection;
+			event mouse_down action: activateMacro; 
+			event "r" action: create_connection_macro; 
+		}
+		
+		
+	}
+}
 experiment REGICID autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	output{
@@ -1000,7 +1049,7 @@ experiment REGICID autorun: true{
 			
 		}
 		
-		display table type:opengl background:#white draw_env:true  camera_pos: {1848.6801 * 100,2083.7744 * 100,2369.1066 * 150} camera_look_pos: {1848.6801 * 100,547.195 * 100,3.0723 * 150} camera_up_vector: {0.0,0.8387,0.5447}
+		display table type:opengl background:#white draw_env:true  camera_pos: {1848.6801 * coeffCamera,2083.7744 * coeffCamera,2369.1066 * coeffCamera} camera_look_pos: {1848.6801 * coeffCamera,547.195 * coeffCamera,3.0723 * coeffCamera} camera_up_vector: {0.0,0.8387,0.5447}
 		{
 			species macroCell aspect:macroTable;
 			species mesoCell aspect:mesoTable;

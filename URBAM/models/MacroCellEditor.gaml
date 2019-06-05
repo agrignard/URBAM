@@ -17,7 +17,8 @@ global {
 	init {
 		write shape.width;
 		write shape.height;
-		create cells from: shape to_rectangles(10,10);
+		create cells from: shape to_rectangles(10,10) where (each.area > 100);
+		
 		
 	}	
 	
