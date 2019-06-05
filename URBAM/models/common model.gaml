@@ -265,7 +265,6 @@ species profile {
 	float max_dist_pev;
 }
 species basic_people skills: [moving]{
-
 	int heading_index <- 0;
 	string mobility_mode <- "walk"; 
 	float display_size <-sqrt(world.shape.area)* 0.01;
