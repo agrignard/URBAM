@@ -13,10 +13,10 @@ import "common model.gaml"
 global{
 	int nbCellsWidth<-10;
 	int nbCellsHeight<-10;
-	float macroCellWidth<-100#km;
-	float macroCellHeight<-100#km;
+	float macroCellWidth<-10#km;
+	float macroCellHeight<-10#km;
 	bool neighbors_connection <- false;
-	int global_people_size <-400;
+	int global_people_size <-20;
 	cells currentMacro;
 	cells currentMeso;
 	
@@ -67,29 +67,32 @@ global{
 		}
 		
 	}
+	
+	int compute_total_number(list<cells> ces) {
+		return (ces sum_of each.nbInhabitants) + ces sum_of (sum(each.visitors.values)) ;
+	}
+	
+	/*reflex debug {
+		write "total macro: " + compute_total_number(macroCell as list) + " total meso:" + compute_total_number(mesoCell as list) + 
+		" theorique meso: " + (currentMeso = nil ? 0 : compute_total_number([currentMeso])) + " nb people: " + length(people) ;
+		
+	}*/
 	action init_nb_habitants {
 		int nb_cells <- nbCellsHeight * nbCellsWidth;
-		map<string,int> nb_type_meso;
+		map<string,int> nb_type_macro;
 		
-		loop t over: mesoCellsProportions.keys {
-			list<int> prop <- mesoCellsProportions[t];
+		loop t over: macroCellsProportions.keys {
+			list<int> prop <- macroCellsProportions[t];
 			int tot <- sum(prop);
 			int nb <- 0;
-			loop tt over: densityPeoplePerType.keys {
-				nb <- nb + int(world.nb_per_types(tt, macroCellWidth/nbCellsWidth/nbCellsWidth, macroCellHeight / nbCellsHeight / nbCellsHeight) * nb_cells * prop[microCellsTypes index_of tt]/ tot);
+			loop i from: 0 to: length(mesoCellsTypes) - 1{
+				nb <- nb + compute_nb_meso_habitants(mesoCellsTypes[i]) * prop[i];
 			}
-			
-			nb_type_meso[t] <- nb;
+			nb <- int(nb / tot * nb_cells);
+			nb_type_macro[t] <- nb;
 		}
 		ask macroCell {
-			list<int> prop <- macroCellsProportions[type];
-			int tot <- sum(prop);
-			int nb;
-			loop t over: nb_type_meso.keys {
-				nbInhabitants <- nbInhabitants + int(nb_type_meso[t] * nb_cells * prop[mesoCellsTypes index_of t]/ tot);
-			}
-			
-		
+			nbInhabitants <- nb_type_macro[type];
 		}
 		
 	}
@@ -199,9 +202,20 @@ global{
 	}
 	
 	int nb_per_types(string ty, float w, float h) {
-		return round(w/nbCellsWidth/#km * h/nbCellsWidth/#km * densityPeoplePerType[ty]);
+		return round(w/#km * h/#km * densityPeoplePerType[ty]);
 	}
 	
+	int compute_nb_meso_habitants(string t) {
+		int nb_cells <- nbCellsHeight * nbCellsWidth;
+		list<int> prop <- mesoCellsProportions[t];
+		int tot <- sum(prop);
+		
+		int nb <- 0;
+		loop tt over: densityPeoplePerType.keys {
+			nb <- nb + int(world.nb_per_types(tt, macroCellWidth/nbCellsWidth/nbCellsWidth, macroCellHeight / nbCellsHeight / nbCellsHeight) * nb_cells * prop[microCellsTypes index_of tt]/ tot);
+		}	
+		return nb;
+	}
 }
 
 species cells parent: poi{
@@ -339,10 +353,10 @@ species cells parent: poi{
 	}
 	
 	aspect macroTable{
-		draw rectangle(width,height) depth:nbInhabitants *10 color:macroCellsColors[type] border:macroCellsColors[type]+25;
-		float d <- nbInhabitants*10.0;
+		draw rectangle(width,height) depth:nbInhabitants /1 color:macroCellsColors[type] border:macroCellsColors[type]+25;
+		float d <- nbInhabitants/1.0;
 		loop v over: visitors.keys {
-			float nb <- visitors[v]*10.0;
+			float nb <- visitors[v]*1.0;
 			draw box(width* 0.8,height * 0.8,nb) at: location + {0,0,d} color:v.color border:#black;
 			d <- d + nb;
 		}
@@ -350,12 +364,12 @@ species cells parent: poi{
 	}
 	
 	aspect mesoTable{
-		draw rectangle(width*nbCellsWidth * building_scale,height*nbCellsHeight* building_scale) depth:nbInhabitants * 100.0 color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight};
-		int d <- nbInhabitants * 100;
+		draw rectangle(width*nbCellsWidth * building_scale,height*nbCellsHeight* building_scale) depth:nbInhabitants * 10.0 color:mesoCellsColors[type] border:mesoCellsColors[type]+25 at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight};
+		int d <- nbInhabitants * 10;
 		list<cells> vs <-  visitors.keys sort_by each.level;
 		loop v over: vs {
 			float sc <- v.level = 0 ? 0.8 : 0.5;
-			int nb <- visitors[v] * 100;
+			int nb <- visitors[v] * 10;
 			draw box(width*nbCellsWidth * building_scale * sc,height*nbCellsHeight* building_scale *sc,nb) at:{world.shape.width*2+(location.x-currentMacro.location.x)*nbCellsWidth,world.shape.height/2+(location.y-currentMacro.location.y)*nbCellsHeight,d} color:v.color border:#black;
 			d <- d + nb;
 		}
@@ -379,11 +393,11 @@ species connection{
 }
 
 species macroConnection parent: connection{
-	float coeff <- 10.0 #km;
+	float coeff <- 1.0 #km;
 }
 
 species mesoConnection parent: connection{
-	float coeff <- 1.0 #km;
+	float coeff <- 0.1 #km;
 	rgb color <- #red;
 	macroConnection myMacroConnection;
 }
@@ -465,26 +479,13 @@ species macroCell parent: cells{
 		
 	}
 	
-	action init_nb_habitants_meso {
-		int nb_cells <- nbCellsHeight * nbCellsWidth;
-		map<string,int> nb_type_meso;
-	//	nbInhabitants <- 0;
-		loop t over: mesoCellsProportions.keys {
-			list<int> prop <- mesoCellsProportions[t];
-			int tot <- sum(prop);
-			int nb <- 0;
-			loop tt over: densityPeoplePerType.keys {
-				nb <- nb + int(world.nb_per_types(tt, macroCellWidth/nbCellsWidth/nbCellsWidth, macroCellHeight / nbCellsHeight / nbCellsHeight) * nb_cells * prop[microCellsTypes index_of tt]/ tot);
-			}
-			
-			nb_type_meso[t] <- nb;
-		}
-		map<mesoCell,float> propCells;
-		float sumProp;
+	action compute_nb_meso_habitants {
 		ask mesoCell {
-			nbInhabitants <- nb_type_meso[type];
-			//myself.nbInhabitants <- myself.nbInhabitants + nbInhabitants;
+			nbInhabitants <- world.compute_nb_meso_habitants(type);
 		}
+	}
+	action init_nb_habitants_meso {
+		do compute_nb_meso_habitants;
 		do distribute_visitors;
 		
 	}
@@ -705,7 +706,6 @@ species mesoCell parent:cells{
 				map<profile, float> prof_pro <- proportions_per_bd_type[one_of(proportions_per_bd_type.keys)];
 				my_profile <- prof_pro.keys[rnd_choice(prof_pro.values)];
 			}
-			myself.nbInhabitants <- myself.nbInhabitants + nbInhabitants;
 		}
 		
 		loop ori over: visitors.keys {
@@ -984,7 +984,7 @@ experiment REGICID autorun: true{
 			
 		}
 		
-		display table type:opengl background:#white draw_env:true  camera_pos: {1848.6801 * 1000,2083.7744 * 1000,2369.1066 * 1000} camera_look_pos: {1848.6801 * 1000,547.195 * 1000,3.0723 * 1000} camera_up_vector: {0.0,0.8387,0.5447}
+		display table type:opengl background:#white draw_env:true  camera_pos: {1848.6801 * 100,2083.7744 * 100,2369.1066 * 150} camera_look_pos: {1848.6801 * 100,547.195 * 100,3.0723 * 150} camera_up_vector: {0.0,0.8387,0.5447}
 		{
 			species macroCell aspect:macroTable;
 			species mesoCell aspect:mesoTable;
