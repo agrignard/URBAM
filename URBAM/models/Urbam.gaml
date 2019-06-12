@@ -660,8 +660,8 @@ experiment cityScienceDemo type: gui autorun: true{
 					float barH <- world.shape.width * 0.01;
 					float factor <-  world.shape.width * 0.1;
 					loop i from:0 to:length(color_per_id)-1{
-						draw square(world.shape.width*0.02) empty:true color: color_per_id.values[i] at: {i*world.shape.width*0.175, -50};
-						draw fivefoods[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, -40} perspective: true font:font("Helvetica", 8 , #bold);
+						draw square(world.shape.width*0.02) empty:true color: color_per_id.values[i] at: {i*world.shape.width*0.175, -120};
+						draw fivefoods[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, -95} perspective: true font:font("Helvetica", 7 , #bold);
 					}
 			}
 		}		
