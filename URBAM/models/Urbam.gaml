@@ -20,7 +20,7 @@ global{
 	float environment_width <- 5000.0;
 	
 	
-	bool load_grid_file_from_cityIO <-false; //parameter: 'Online Grid:' category: 'Simulation' <- false;
+	bool load_grid_file_from_cityIO <-true; //parameter: 'Online Grid:' category: 'Simulation' <- false;
 	bool load_grid_file <- false;// parameter: 'Offline Grid:' category: 'Simulation'; 
 	bool udpScannerReader <- false; 
 	bool udpSliderReader <- true; 
@@ -35,7 +35,10 @@ global{
 	bool on_modification_bds <- false update: false;
 	
 	
-	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/cityIO_gama";
+	//string cityIOUrl <-"https://cityio.media.mit.edu/api/table/cityIO_gama";
+	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/urbam";
+	
+	
 	
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
@@ -128,7 +131,7 @@ global{
 	
 	
 	reflex test_load_file_from_cityIO when: load_grid_file_from_cityIO and every(10#cycle) {
-		do load_cityIO_matrix_v2(cityIOUrl);
+		do load_cityIO_urbam_v2(cityIOUrl);
 	}
 	
 	reflex test_load_file when: load_grid_file and every(100#cycle){
@@ -292,12 +295,10 @@ global{
 		}
 		int nbCols <- int(cityMatrixData["header"]["spatial"]["ncols"]);
 		int nbRows <- int(cityMatrixData["header"]["spatial"]["nrows"]);
-		//cityMatrixCell <- cityMatrixData["grid"];
 		//write 	cityMatrixCell;
 		loop i from: 0 to: nbCols-1 {
 			loop j from: 0 to: nbRows -1{
 				int id <-int(cityMatrixData["grid"][j*nbCols+i][0]);
-				//write id;
       	  		if(id!=-2 and id !=-1 and id!=6 ){
       	  			do createCell(id+1, i, j);	
       	  		} 
@@ -307,6 +308,36 @@ global{
 		  		}   
 			}
         } 	
+	}
+	
+		action load_cityIO_urbam_v2(string cityIOUrl_) {
+		map<string, unknown> cityMatrixData;
+	    list<map<string, int>> cityMatrixCell;	
+		try {
+			cityMatrixData <- json_file(cityIOUrl_).contents;
+		} catch {
+			cityMatrixData <- json_file("../includes/cityIO_gama.json").contents;
+			write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_gama.json";
+		}
+		int ncols <- int(cityMatrixData["header"]["spatial"]["ncols"]);
+		int nrows <- int(cityMatrixData["header"]["spatial"]["nrows"]);
+		int x;
+		int y;
+		int id;
+		loop i from:0 to: (ncols*nrows-2){ 
+			if((i mod nrows) mod 2 = 1 and int(i/ncols) mod 2 = 0){   
+				x<- int((i mod nrows)/2);
+			    y<-int((int(i/ncols))/2);
+			    id<-int(cityMatrixData["grid"][i][0]);
+			    if(id!=-2 and id !=-1 and id!=6 ){
+	      	  		ask world{do createCell(id+1, x, y);}	
+	      	    } 
+	      	    if (id=-1){
+			    	cell current_cell <- cell[x,y];
+				    ask current_cell{ do erase_building;}
+			    }	   
+			 } 		
+       }	
 	}
 		
 }
