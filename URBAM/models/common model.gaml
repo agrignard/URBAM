@@ -26,7 +26,7 @@ global{
 	
 	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)", "color","hide"];
 	
-	int global_people_size <-100;
+	int global_people_size <-50;
 	
 	list<basic_people> list_of_people;
 	
@@ -53,7 +53,7 @@ global{
 	map<string,float> nb_people_per_size <- ["S"::10.0, "M"::50.0, "L"::100.0];
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],5::["office","M"],6::["office","L"]];
-	list fivefoods<-["Residential","Retail","Hotel","Office","Industrial","Park"];
+	list fivefoods<-["Resi.","Retail","Hotel","Office","Indus.","Park"];
 		
 
 
