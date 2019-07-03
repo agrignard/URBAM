@@ -11,10 +11,10 @@ model Regicid
 
 import "common model.gaml"
 global{
-	bool randomInit <- false;
+	bool randomInit <- true;
 	bool loadShapefile <- false;
 	bool neighbors_connection <- false;
-	int global_people_size <-20;
+	int global_people_size <-10;
 	cells currentMacro;
 	cells currentMeso;
 	bool creating_connection <- false;
@@ -51,12 +51,12 @@ global{
 	shape_file macroShapefile ;
 	float macroCellWidth<-10#km;
 	float macroCellHeight<-10#km;
-	int nbCellsWidth<- 10;
-	int nbCellsHeight<-10;
+	int nbCellsWidth<- 6;
+	int nbCellsHeight<-6;
 	geometry shape <- loadShapefile ? envelope(macroShapefile) : rectangle(nbCellsWidth*macroCellWidth, nbCellsHeight*macroCellHeight);
 	
 	
-	float coeffCamera <- shape.width/ #km;
+	float coeffCamera <- 1+shape.width/ #km;
 	file imageRaster <- file('./../images/Kent_Sketches.png');
 	float step <- shape.width/20000.0 ;
 	
@@ -365,17 +365,29 @@ species cells parent: poi{
 	}
 	
 	aspect macro{
+		float w <- building_scale * width;
+		float h <- building_scale * height;
+		
 		if (self = currentMacro) {
-			draw rectangle(width,height) color:#magenta;
-			draw rectangle(width * 0.8,height * 0.8) color: macroCellsColors[type] depth: 1;
+			draw rectangle(w * 0.8,h * 0.8) color: macroCellsColors[type] depth: 1;
 		} else {
-			draw rectangle(width,height) color: macroCellsColors[type] border:macroCellsColors[type]+25;
+			draw rectangle(w,h) color: macroCellsColors[type] border:macroCellsColors[type]+25;
 		}
 		if (origin_creation) {
 			draw triangle(width * 0.5) color: #pink border: #black depth: 1.5;
 		}
+	}
+	
+	aspect macroFractal{
+		float w <- building_scale * width;
+		float h <- building_scale * height;
 		
-		
+		if (self != currentMacro) {
+			draw rectangle(w,h) color: macroCellsColors[type] border:macroCellsColors[type]+25;
+		}
+		if (origin_creation) {
+			draw triangle(width * 0.5) color: #pink border: #black depth: 1.5;
+		}
 	}
 	
 	aspect meso{
@@ -383,9 +395,20 @@ species cells parent: poi{
 		float h <- building_scale * height;
 		
 		if (self = currentMeso) {
-			draw rectangle(w,h) color:#magenta;
 			draw rectangle(w* 0.8,h* 0.8) color:mesoCellsColors[type] depth: 1;
 		} else {
+			draw rectangle(w,h) color:mesoCellsColors[type];
+		}
+		if (origin_creation) {
+			draw triangle(w * 0.5) color: #pink border: #black depth: 1.5;
+		}
+	}
+	
+	aspect mesoFractal{
+		float w <- building_scale * width;
+		float h <- building_scale * height;
+		
+		if (self != currentMeso) {
 			draw rectangle(w,h) color:mesoCellsColors[type];
 		}
 		if (origin_creation) {
@@ -399,11 +422,11 @@ species cells parent: poi{
 	}
 	
 	aspect macroTable{
-		draw rectangle(width,height) depth:nbInhabitants /1 color:macroCellsColors[type] border:macroCellsColors[type]+25;
+		draw rectangle(width * building_scale,height* building_scale) depth:nbInhabitants / 10 color:macroCellsColors[type] border:macroCellsColors[type]+25;
 		float d <- nbInhabitants/1.0;
 		loop v over: visitors.keys {
 			float nb <- visitors[v]*1.0;
-			draw box(width* 0.8,height * 0.8,nb) at: location + {0,0,d} color:v.color border:#black;
+			draw box(width* 0.8 * building_scale,height * 0.8 * building_scale,nb) at: location + {0,0,d} color:v.color border:#black;
 			d <- d + nb;
 		}
 		
@@ -1001,10 +1024,10 @@ species people parent: basic_people skills: [moving]{
 	
 }
 
-experiment REGICID_FRANCE parent: REGICID autorun: true{
+experiment REGICID_FRANCE parent: REGICID_Computer_Demo autorun: true{
 	action _init_ {
 	
-		map<string, float> densityPeoplePerTypeG <-["Residential"::20.0, "Commercial"::5.0, "Industrial"::2.0, "Educational"::10.0, "Park"::2.0,"Lake"::0.0];
+		map<string, float> densityPeoplePerTypeG <-["Residential"::2.0, "Commercial"::0.5, "Industrial"::0.2, "Educational"::1.0, "Park"::0.2,"Lake"::0.0];
 		create simulation with: [global_people_size:: 400, loadShapefile:: true, densityPeoplePerType::densityPeoplePerTypeG, macroShapefile :: shape_file("../includes/GIS/France_squares.shp")];
 	}
 	output{
@@ -1015,41 +1038,37 @@ experiment REGICID_FRANCE parent: REGICID autorun: true{
 			event mouse_down action: activateMacro; 
 			event "r" action: create_connection_macro; 
 		}
-		
-		
 	}
 }
-experiment REGICID autorun: true{
+experiment REGICID_Computer_Demo autorun: true {
 	float minimum_cycle_duration <- 0.05;
 	output{
-
-		layout vertical([horizontal([0::3863,horizontal([1::5000,2::5000])::6137])::3362,3::6638])  ;
-		//editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
+		layout vertical([horizontal([0::3781,horizontal([1::5000,2::5000])::6219])::3529,horizontal([3::5000,4::5000])::6471])
+		editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
 		
 
-		display macro  type:opengl draw_env:false camera_interaction:false{
+		display macro  type:opengl background:#black draw_env:false camera_interaction:false{
 			species macroCell aspect:macro;
 			species macroConnection;
 			event mouse_down action: activateMacro; 
 			event "r" action: create_connection_macro; 
-			
-				
+					
 		}
-		display meso type:opengl draw_env:false  camera_interaction:false camera_pos:  currentMacro = nil ?  {world.location.x, world.location.y, world.shape.width/(nbCellsWidth*0.8)} : {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  currentMacro = nil ? world.location :{currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display meso type:opengl background:#black draw_env:false camera_interaction:false camera_pos:  currentMacro = nil ?  {world.location.x, world.location.y, world.shape.width/(nbCellsWidth*0.8)} : {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  currentMacro = nil ? world.location :{currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species mesoCell aspect:meso;
 			species mesoConnection;
 			event mouse_down action: activateMeso; 	
 			event "r" action: create_connection_meso; 		
 		}
 
-		display micro type:opengl synchronized: true draw_env:false z_near: world.shape.width / 1000  camera_interaction:false camera_pos: currentMeso = nil ? {world.location.x, world.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} : {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  currentMeso = nil ? world.location : {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+		display micro type:opengl background:#black synchronized: true draw_env:false z_near: world.shape.width / 1000  camera_interaction:false camera_pos: currentMeso = nil ? {world.location.x, world.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} : {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  currentMeso = nil ? world.location : {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
 			species microCell aspect:micro;
 			species road ;
 			species people;	 
 			
 		}
 		
-		display table type:opengl background:#white draw_env:true  camera_pos: {1848.6801 * coeffCamera,2083.7744 * coeffCamera,2369.1066 * coeffCamera} camera_look_pos: {1848.6801 * coeffCamera,547.195 * coeffCamera,3.0723 * coeffCamera} camera_up_vector: {0.0,0.8387,0.5447}
+		display table type:opengl background:#black draw_env:false //camera_pos: {1848.6801 * coeffCamera,2083.7744 * coeffCamera,2369.1066 * coeffCamera} camera_look_pos: {1848.6801 * coeffCamera,547.195 * coeffCamera,3.0723 * coeffCamera} camera_up_vector: {0.0,0.8387,0.5447}
 		{
 			species macroCell aspect:macroTable;
 			species mesoCell aspect:mesoTable;
@@ -1066,8 +1085,57 @@ experiment REGICID autorun: true{
 			graphics "text" {
 				draw rectangle(525#px,525#px) rotated_by (89,{1,0,0}) color:#black  at: {world.shape.width*2, -world.shape.width*0.11,world.shape.width} ;
 				draw rectangle(500#px,500#px) rotated_by (89,{1,0,0}) texture:[imageRaster.path] at: {world.shape.width*2, -world.shape.width*0.1,world.shape.width};
-			} 
+			}
 		}
-	}
-	
+		
+		display fractal autosave:true synchronized:true type:opengl background:#black draw_env:false// camera_pos: {45000.0,45006.7707,500000/(1+cycle*0.1)} camera_look_pos: {45000.0,45000.0,0.0} camera_up_vector: {0.0,1.0,0.0} 
+		{
+			species macroCell aspect:macroFractal;
+			species mesoCell aspect:mesoFractal;
+			species microCell aspect:micro;
+			species road ;
+			species people;	
+		}
+	}	
 }
+
+
+
+experiment REGICID_Table autorun: true{
+	float minimum_cycle_duration <- 0.05;
+	output{
+		//layout #split;
+		//layout vertical([horizontal([0::3781,horizontal([1::5000,2::5000])::6219])::3529,horizontal([3::5000,4::5000])::6471]);
+		//editors: false toolbars: false tabs: false parameters: false consoles: false navigator: false controls: false tray: false;
+		
+
+		display macro  type:opengl background:#black draw_env:false camera_interaction:false{
+			species macroCell aspect:macro;
+			species macroConnection;
+			event mouse_down action: activateMacro; 
+			event "r" action: create_connection_macro; 
+					
+		}
+		display meso type:opengl background:#black draw_env:false camera_interaction:false camera_pos: currentMacro = nil ?  {world.location.x, world.location.y, world.shape.width/(nbCellsWidth*0.8)} : {currentMacro.location.x, currentMacro.location.y, world.shape.width/(nbCellsWidth*0.8)} camera_look_pos:  currentMacro = nil ? world.location :{currentMacro.location.x, currentMacro.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+			species mesoCell aspect:meso;
+			species mesoConnection;
+			event mouse_down action: activateMeso; 	
+			event "r" action: create_connection_meso; 		
+		}
+
+		display micro type:opengl background:#black synchronized: true draw_env:false z_near: world.shape.width / 1000  camera_interaction:false camera_pos: currentMeso = nil ? {world.location.x, world.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} : {currentMeso.location.x, currentMeso.location.y, world.shape.width/((nbCellsWidth*0.8)*(nbCellsWidth*0.8))} camera_look_pos:  currentMeso = nil ? world.location : {currentMeso.location.x, currentMeso.location.y, 0} camera_up_vector: {0.0, 1.0, 0.0}{
+			species microCell aspect:micro;
+			species road ;
+			species people;	 
+			
+		}
+		
+		display table type:opengl background:#black draw_env:true fullscreen:1 toolbar:false//camera_pos: {1848.6801 * coeffCamera,2083.7744 * coeffCamera,2369.1066 * coeffCamera} camera_look_pos: {1848.6801 * coeffCamera,547.195 * coeffCamera,3.0723 * coeffCamera} camera_up_vector: {0.0,0.8387,0.5447}
+		{
+			species macroCell aspect:macroTable;
+			species mesoCell aspect:mesoTable;
+			species microCell aspect:microTable;
+		}
+	}	
+}
+
