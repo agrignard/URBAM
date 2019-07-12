@@ -20,13 +20,13 @@ global{
 	float environment_width <- 5000.0;
 	
 	
-	bool load_grid_file_from_cityIO <-false; //parameter: 'Online Grid:' category: 'Simulation' <- false;
+	bool load_grid_file_from_cityIO <-true; //parameter: 'Online Grid:' category: 'Simulation' <- false;
 	bool load_grid_file <- false;// parameter: 'Offline Grid:' category: 'Simulation'; 
 	bool udpScannerReader <- false; 
-	bool udpSliderReader <- true; 
+	bool udpSliderReader <- false; 
 	bool editionMode <-false;
 	
-	bool show_cells parameter: 'Show cells:' category: 'Aspect' <- false;
+	bool show_cells parameter: 'Show cells:' category: 'Aspect' <- true;
 	bool show_building parameter: 'Show Building:' category: 'Aspect' <- true;
 	
 	bool on_modification_cells <- false update: show_cells != show_cells_prev;
@@ -73,7 +73,7 @@ global{
 	]; 
 	
 	// Network
-	int scaningUDPPort <- 9877;
+	int scaningUDPPort <- 5000;
 	int interfaceUDPPort <- 9878;
 	string url <- "localhost";
 	
@@ -139,7 +139,7 @@ global{
 		file_cpt <- (file_cpt+ 1) mod 5;
 	}
 	
-	reflex randomGridUpdate when:!udpScannerReader and !editionMode and every(100#cycle){
+	reflex randomGridUpdate when:!udpScannerReader and !editionMode and every(1000#cycle){
 		do randomGrid;
 	} 
 		
@@ -404,7 +404,7 @@ species building parent: poi {
 	aspect default {
 		//if show_building {draw shape scaled_by building_scale color: color;}
 		//if show_building {draw shape scaled_by 0.5 color: rgb(100,100,100);}
-		if show_building {draw shape scaled_by building_scale*1.1 empty:true color: color;}
+		if show_building {draw shape scaled_by building_scale*1.2 empty:true color: color;}
 	}
 }
 
@@ -449,8 +449,8 @@ grid cell width: grid_width height: grid_height { // height: 16{
 	}
 	
 	aspect default{
-		//if show_cells {draw shape scaled_by (building_scale+(1-building_scale)/3) color: rgb(100,100,100) ;}
-		if show_cells {draw shape scaled_by (0.5) color: rgb(100,100,100) ;}
+		//if {draw shape scaled_by (building_scale+(1-building_scale)/3) color: rgb(100,100,100) ;}
+		if show_cells {draw shape scaled_by (0.6) color: rgb(100,100,100) ;}
 	}
 
 }
