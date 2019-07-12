@@ -23,7 +23,7 @@ global{
 	bool load_grid_file_from_cityIO <-true; //parameter: 'Online Grid:' category: 'Simulation' <- false;
 	bool load_grid_file <- false;// parameter: 'Offline Grid:' category: 'Simulation'; 
 	bool udpScannerReader <- false; 
-	bool udpSliderReader <- false; 
+	bool udpSliderReader <- true; 
 	bool editionMode <-false;
 	
 	bool show_cells parameter: 'Show cells:' category: 'Aspect' <- true;
@@ -326,7 +326,6 @@ global{
 				x<- int((i mod nrows)/2);
 			    y<-int((int(i/ncols))/2);
 			    id<-int(cityMatrixData["grid"][i][0]);
-			    write "id" + id;
 			    if(id!=-2 and id !=-1 and id!=6 ){
 	      	  		ask world{do createCell(id+1, x, y);}	
 	      	    } 
