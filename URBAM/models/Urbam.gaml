@@ -37,9 +37,6 @@ global{
 	
 	//string cityIOUrl <-"https://cityio.media.mit.edu/api/table/cityIO_gama";
 	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/urbam";
-	
-	
-	
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
 	
@@ -293,9 +290,9 @@ global{
 			cityMatrixData <- json_file("../includes/cityIO_gama.json").contents;
 			write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_gama.json";
 		}
+		
 		int nbCols <- int(cityMatrixData["header"]["spatial"]["ncols"]);
 		int nbRows <- int(cityMatrixData["header"]["spatial"]["nrows"]);
-		//write 	cityMatrixCell;
 		loop i from: 0 to: nbCols-1 {
 			loop j from: 0 to: nbRows -1{
 				int id <-int(cityMatrixData["grid"][j*nbCols+i][0]);
@@ -329,6 +326,7 @@ global{
 				x<- int((i mod nrows)/2);
 			    y<-int((int(i/ncols))/2);
 			    id<-int(cityMatrixData["grid"][i][0]);
+			    write "id" + id;
 			    if(id!=-2 and id !=-1 and id!=6 ){
 	      	  		ask world{do createCell(id+1, x, y);}	
 	      	    } 
@@ -473,9 +471,9 @@ grid button width:3 height:4
 species NetworkingAgent skills:[network] {
 	string type;
 	string previousMess <-"";
-	reflex fetch {	
+	reflex fetch when:has_more_message() {	
 		if (length(mailbox) > 0) {
-			message s <- last(mailbox);
+			message s <- fetch_message();
 			if(s.contents !=previousMess){	
 			  previousMess<-s.contents;
 			  if(type="scanner"){

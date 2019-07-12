@@ -21,5 +21,10 @@
 			<type>1</type>
 			<locationURI>CACHE_LOC/cityio.media.mit.edu+_++_+api+_+table+_+citymatrix_volpe</locationURI>
 		</link>
+		<link>
+			<name>external/urbam</name>
+			<type>1</type>
+			<locationURI>CACHE_LOC/cityio.media.mit.edu+_++_+api+_+table+_+urbam</locationURI>
+		</link>
 	</linkedResources>
 </projectDescription>
