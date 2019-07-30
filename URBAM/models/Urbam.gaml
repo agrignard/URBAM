@@ -14,8 +14,8 @@ global{
 	bool blackMirror parameter: 'Dark Room' category: 'Aspect' <- true;
 	
 	//SPATIAL PARAMETERS  
-	int grid_height <- 6;
-	int grid_width <- 6;
+	int grid_height <- 8;
+	int grid_width <- 8;
 	float environment_height <- 5000.0;
 	float environment_width <- 5000.0;
 	
@@ -23,7 +23,7 @@ global{
 	bool load_grid_file_from_cityIO <-true; //parameter: 'Online Grid:' category: 'Simulation' <- false;
 	bool load_grid_file <- false;// parameter: 'Offline Grid:' category: 'Simulation'; 
 	bool udpScannerReader <- false; 
-	bool udpSliderReader <- true; 
+	bool udpSliderReader <- false; 
 	bool editionMode <-false;
 	
 	bool show_cells parameter: 'Show cells:' category: 'Aspect' <- true;
@@ -36,7 +36,7 @@ global{
 	
 	
 	//string cityIOUrl <-"https://cityio.media.mit.edu/api/table/cityIO_gama";
-	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/urbam";
+	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/launchpad";
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
 	
@@ -128,7 +128,7 @@ global{
 	
 	
 	reflex test_load_file_from_cityIO when: load_grid_file_from_cityIO and every(10#cycle) {
-		do load_cityIO_urbam_v2(cityIOUrl);
+		do load_cityIO_matrix_v2(cityIOUrl);
 	}
 	
 	reflex test_load_file when: load_grid_file and every(100#cycle){
@@ -136,7 +136,7 @@ global{
 		file_cpt <- (file_cpt+ 1) mod 5;
 	}
 	
-	reflex randomGridUpdate when:!udpScannerReader and !editionMode and every(1000#cycle){
+	reflex randomGridUpdate when:!udpScannerReader and !editionMode and !load_grid_file_from_cityIO and every(1000#cycle){
 		do randomGrid;
 	} 
 		
@@ -238,8 +238,8 @@ global{
 	
    action randomGrid{
    	int id;
-   	loop i from: 0 to: 5 {
-			loop j from: 0 to: 5 {
+   	loop i from: 0 to: grid_width-1 {
+			loop j from: 0 to: grid_height-1 {
 				    if (flip(0.5)){
 				        id <- 1+rnd(5);	
 				    }else{
@@ -283,21 +283,21 @@ global{
 	
 	action load_cityIO_matrix_v2(string cityIOUrl_) {
 		map<string, unknown> cityMatrixData;
-	    list<map<string, int>> cityMatrixCell;	
+	    list<map<string, int>> cityMatrixCell;
+	    	
 		try {
 			cityMatrixData <- json_file(cityIOUrl_).contents;
 		} catch {
-			cityMatrixData <- json_file("../includes/cityIO_gama.json").contents;
+			//cityMatrixData <- json_file("../includes/cityIO_gama.json").contents;
 			write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_gama.json";
 		}
-		
 		int nbCols <- int(cityMatrixData["header"]["spatial"]["ncols"]);
 		int nbRows <- int(cityMatrixData["header"]["spatial"]["nrows"]);
 		loop i from: 0 to: nbCols-1 {
 			loop j from: 0 to: nbRows -1{
 				int id <-int(cityMatrixData["grid"][j*nbCols+i][0]);
       	  		if(id!=-2 and id !=-1 and id!=6 ){
-      	  			do createCell(id+1, i, j);	
+      	  			do createCell(id+1, i, j);		
       	  		} 
       	  		if (id=-1){
 		    		cell current_cell <- cell[i,j];
@@ -316,6 +316,7 @@ global{
 			cityMatrixData <- json_file("../includes/cityIO_Urbam.json").contents;
 			write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_gama.json";
 		}
+		write cityMatrixData;
 		int ncols <- int(cityMatrixData["header"]["spatial"]["ncols"]);
 		int nrows <- int(cityMatrixData["header"]["spatial"]["nrows"]);
 		int x;
@@ -327,7 +328,7 @@ global{
 			    y<-int((int(i/ncols))/2);
 			    id<-int(cityMatrixData["grid"][i][0]);
 			    if(id!=-2 and id !=-1 and id!=6 ){
-	      	  		ask world{do createCell(id+1, x, y);}	
+	      	  		ask world{do createCell(id+1, x, y);}
 	      	    } 
 	      	    if (id=-1){
 			    	cell current_cell <- cell[x,y];
@@ -627,40 +628,3 @@ experiment cityScienceTable type: gui autorun: true{
 	}
 }
 
-
-experiment cityScienceDemo type: gui autorun: true{
-	float minimum_cycle_duration <- 0.05;
-	output {
-		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false fullscreen:1
-		camera_pos: {2160.3206,1631.7982,12043.0275} camera_look_pos: {2160.3206,1631.588,0.0151} camera_up_vector: {0.0,1.0,0.0}{
-			species cell aspect:default;// refresh: on_modification_cells;
-			species road ;
-			species people;
-			species building;// refresh: on_modification_bds;
-			
-			graphics "mobilityMode" {
-				    draw circle(world.shape.width * 0.01) color: color_per_mode["walk"] at: {world.shape.width * 0.2, world.shape.height};
-					draw "Walk" color: color_per_mode["walk"]  at: {world.shape.width * 0.2+world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
-					
-					draw circle(world.shape.width * 0.01) color: color_per_mode["bike"] at: {world.shape.width * 0.4, world.shape.height};
-					draw "Bike" color: color_per_mode["bike"]  at: {world.shape.width * 0.4 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
-					
-					draw circle(world.shape.width * 0.01) color: color_per_mode["car"] at: {world.shape.width * 0.6, world.shape.height};
-					draw "Car" color: color_per_mode["car"]  at: {world.shape.width * 0.6 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
-					
-					draw circle(world.shape.width * 0.01) color: color_per_mode["pev"] at: {world.shape.width * 0.8, world.shape.height};
-					draw "Pev" color: color_per_mode["pev"]  at: {world.shape.width * 0.8 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
-			} 
-			
-			graphics "landuse" {
-					point hpos <- {world.shape.width * 1.1, world.shape.height * 1.1};
-					float barH <- world.shape.width * 0.01;
-					float factor <-  world.shape.width * 0.1;
-					loop i from:0 to:length(color_per_id)-1{
-						draw square(world.shape.width*0.02) empty:true color: color_per_id.values[i] at: {i*world.shape.width*0.175, -120};
-						draw fivefoods[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, -95} perspective: true font:font("Helvetica", 7 , #bold);
-					}
-			}
-		}		
-	}
-}
