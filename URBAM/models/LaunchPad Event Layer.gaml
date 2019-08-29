@@ -27,7 +27,7 @@ global skills:[launchpadskill]
 	}
 	
 	action updateGrid
-	{   
+	{   //write buttonPressed;
 		if(function_color_map.keys contains buttonPressed and buttonPressed != "MIXER"  and buttonPressed != "USER_2"){
 		    ask launchpadGrid[ int(padPressed.y *8 + padPressed.x)]{
 		    	type<-function_id_map[buttonPressed];
@@ -35,13 +35,13 @@ global skills:[launchpadskill]
 		    }
 		    do setPadLight color:function_color_map[buttonPressed];
 		}
-		if(buttonPressed = "MIXER"){
+		if(buttonPressed = "USER_2"){
 			ask launchpadGrid[ int(padPressed.y *8 + padPressed.x)]{
 				color <- #white;
 				type<--1;
 			}
 		}			
-		if(buttonPressed="ARM"){
+		if(buttonPressed="MIXER"){
 			do resetPad;
 			do setButtonLight colors:buttontypeColorMap.values;	
 			ask launchpadGrid{
@@ -50,7 +50,6 @@ global skills:[launchpadskill]
 				type<--1;
 			}
 		}
-		write buttonPressed;
 		do updateDisplay;
 		do pushGrid(inputMatrixData);
 	}
@@ -100,7 +99,7 @@ grid launchpadGrid width: 8 height: 8{
 	}
 }
 
-experiment Displays type: gui
+experiment Displays type: gui autorun:true
 {
 	output
 	{

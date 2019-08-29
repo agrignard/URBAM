@@ -25,8 +25,9 @@ global{
 	bool udpScannerReader <- false; 
 	bool udpSliderReader <- false; 
 	bool editionMode <-false;
+	bool launchpad<-true;
 	
-	bool show_cells parameter: 'Show cells:' category: 'Aspect' <- true;
+	bool show_cells parameter: 'Show cells:' category: 'Aspect' <- false;
 	bool show_building parameter: 'Show Building:' category: 'Aspect' <- true;
 	
 	bool on_modification_cells <- false update: show_cells != show_cells_prev;
@@ -34,9 +35,7 @@ global{
 	bool show_cells_prev <- show_cells update: show_cells ;
 	bool on_modification_bds <- false update: false;
 	
-	
-	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/urbam";
-	//string cityIOUrl <-"https://cityio.media.mit.edu/api/table/launchpad";
+	string cityIOUrl;
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
 	
@@ -75,6 +74,7 @@ global{
 	string url <- "localhost";
 	
 	init {
+		cityIOUrl <- launchpad ? "https://cityio.media.mit.edu/api/table/launchpad": "https://cityio.media.mit.edu/api/table/urbam";
 		list<geometry> lines;
 		float cell_w <- first(cell).shape.width;
 		float cell_h <- first(cell).shape.height;
@@ -103,7 +103,8 @@ global{
 		     do connect to: url protocol: "udp_server" port: interfaceUDPPort ;
 		    }	   
 		}
-	}
+		
+		}
 		
 
 	
@@ -128,8 +129,12 @@ global{
 	
 	
 	reflex test_load_file_from_cityIO when: load_grid_file_from_cityIO and every(10#cycle) {
-		//do load_cityIO_matrix_v2(cityIOUrl);
-		do load_cityIO_urbam_v2(cityIOUrl);
+		if(launchpad){
+	      do load_cityIO_matrix_v2(cityIOUrl);
+		}else{
+		  do load_cityIO_urbam_v2(cityIOUrl);
+		}
+		
 	}
 	
 	reflex test_load_file when: load_grid_file and every(100#cycle){
@@ -402,8 +407,8 @@ species building parent: poi {
 	}
 	aspect default {
 		//if show_building {draw shape scaled_by building_scale color: color;}
-		//if show_building {draw shape scaled_by 0.5 color: rgb(100,100,100);}
-		if show_building {draw shape scaled_by building_scale*1.2 empty:true color: color;}
+		if show_building {draw shape scaled_by 0.5 color: color;}
+		//if show_building {draw shape scaled_by building_scale*1.2 empty:true color: color;}
 	}
 }
 
@@ -448,8 +453,7 @@ grid cell width: grid_width height: grid_height { // height: 16{
 	}
 	
 	aspect default{
-		//if {draw shape scaled_by (building_scale+(1-building_scale)/3) color: rgb(100,100,100) ;}
-		if show_cells {draw shape scaled_by (0.6) color: rgb(100,100,100) ;}
+		if show_cells {draw shape scaled_by (0.5) color: rgb(100,100,100) ;}
 	}
 
 }
@@ -595,7 +599,7 @@ experiment cityScienceTable type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	output {
 		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false fullscreen:1
-		keystone: [{0.11656421991808863,0.167109629356474,0.0},{0.14285268545600432,0.8143146078580775,0.0},{0.7170183091562854,0.8153797412496441,0.0},{0.735674403288836,0.16759312313473373,0.0}]{	 
+		keystone: [{0.09873319012165316,0.15747776671865577,0.0},{0.12499696334845561,0.8159451128747172,0.0},{0.7411358068057597,0.8165576025759461,0.0},{0.7569689458996193,0.15381583447856062,0.0}]{	 
 		
 			species cell aspect:default;// refresh: on_modification_cells;
 			species road ;
@@ -603,17 +607,17 @@ experiment cityScienceTable type: gui autorun: true{
 			species building;// refresh: on_modification_bds;
 			
 			graphics "mobilityMode" {
-				    draw circle(world.shape.width * 0.01) color: color_per_mode["walk"] at: {world.shape.width * 0.2, world.shape.height};
-					draw "walk" color: color_per_mode["walk"]  at: {world.shape.width * 0.2+world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+				    draw circle(world.shape.width * 0.01) color: color_per_mode["walk"] at: {world.shape.width * 0.2, world.shape.height*0.985};
+					draw "walk" color: color_per_mode["walk"]  at: {world.shape.width * 0.2+world.shape.width * 0.02, world.shape.height*0.995} font:font("Helvetica", 20 , #bold);
 					
-					draw circle(world.shape.width * 0.01) color: color_per_mode["bike"] at: {world.shape.width * 0.4, world.shape.height};
-					draw "bike" color: color_per_mode["bike"]  at: {world.shape.width * 0.4 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+					draw circle(world.shape.width * 0.01) color: color_per_mode["bike"] at: {world.shape.width * 0.4, world.shape.height*0.985};
+					draw "bike" color: color_per_mode["bike"]  at: {world.shape.width * 0.4 + world.shape.width * 0.02, world.shape.height *0.995} font:font("Helvetica", 20 , #bold);
 					
-					draw circle(world.shape.width * 0.01) color: color_per_mode["car"] at: {world.shape.width * 0.6, world.shape.height};
-					draw "car" color: color_per_mode["car"]  at: {world.shape.width * 0.6 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+					draw circle(world.shape.width * 0.01) color: color_per_mode["car"] at: {world.shape.width * 0.6, world.shape.height*0.985};
+					draw "car" color: color_per_mode["car"]  at: {world.shape.width * 0.6 + world.shape.width * 0.02, world.shape.height *0.995} font:font("Helvetica", 20 , #bold);
 					
-					draw circle(world.shape.width * 0.01) color: color_per_mode["pev"] at: {world.shape.width * 0.8, world.shape.height};
-					draw "pev" color: color_per_mode["pev"]  at: {world.shape.width * 0.8 + world.shape.width * 0.02, world.shape.height * 1.005} font:font("Helvetica", 6 , #bold);
+					draw circle(world.shape.width * 0.01) color: color_per_mode["pev"] at: {world.shape.width * 0.8, world.shape.height*0.985};
+					draw "pev" color: color_per_mode["pev"]  at: {world.shape.width * 0.8 + world.shape.width * 0.02, world.shape.height *0.995} font:font("Helvetica", 20 , #bold);
 			}
 			
 			graphics "landuse" {
@@ -621,8 +625,8 @@ experiment cityScienceTable type: gui autorun: true{
 					float barH <- world.shape.width * 0.01;
 					float factor <-  world.shape.width * 0.1;
 					loop i from:0 to:length(color_per_id)-1{
-						draw square(world.shape.width*0.02) empty:true color: color_per_id.values[i] at: {i*world.shape.width*0.175, -50};
-						draw fivefoods[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025, -40} perspective: true font:font("Helvetica", 8 , #bold);
+						draw square(world.shape.width*0.02) empty:false color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.05, 75};
+						draw fivefoods[i] color: color_per_id.values[i] at: {i*world.shape.width*0.175+world.shape.width*0.025+world.shape.width*0.05, 100} perspective: true font:font("Helvetica", 20 , #bold);
 					}
 			}
 		}		

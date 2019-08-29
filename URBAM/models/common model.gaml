@@ -15,7 +15,7 @@ global{
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
 	float weight_pev  step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" <- 0.1;
 		
-	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"split (5)" among:["default", "default (car)", "hide","road type","edge color","split (3)", "split (5)"];
+	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"hide" among:["default", "default (car)", "hide","road type","edge color","split (3)", "split (5)"];
 	float spacing parameter: 'Spacing ' category: 'Road Aspect' <- 0.75 min:0.0 max: 1.5;
 	float line_width parameter: 'Line width' category: 'Road Aspect' <- 0.65 min:0.0 max: 3.0;
 	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
@@ -51,7 +51,7 @@ global{
 	
 	map<string,rgb> color_per_type <- ["residential"::#gray, "office"::#orange];
 	//map<string,rgb> color_per_id <- ["residentialS"::#blue,"residentialM"::#white,"residentialL"::#cyan,"officeS"::#yellow,"officeM"::#red,"officeL"::#green];
-	map<string,rgb> color_per_id <- ["residentialS"::#red,"residentialM"::#orange,"residentialL"::#brown,"officeS"::#darkgreen,"officeM"::#green,"officeL"::#green];
+	map<string,rgb> color_per_id <- ["residentialS"::#red,"residentialM"::#darkorange,"residentialL"::#yellow,"officeS"::#darkgreen,"officeM"::#gamagreen,"officeL"::#lime];
 	map<string,float> nb_people_per_size <- ["S"::10.0, "M"::50.0, "L"::100.0];
 	map<string,float> proba_choose_per_size <- ["S"::0.1, "M"::0.5, "L"::1.0];
 	map<int, list<string>> id_to_building_type <- [1::["residential","S"],2::["residential","M"],3::["residential","L"],4::["office","S"],5::["office","M"],6::["office","L"]];
