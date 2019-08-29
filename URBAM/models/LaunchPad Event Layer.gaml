@@ -8,7 +8,7 @@ model event_layer_model
 
 global skills:[launchpadskill]
 {
-	map<int,string> buttontypeColorMap <-[1::"red",2::"orange",3::"brown",4::"yellow",5::"lightyellow",6::"green",7::"darkgreen",8::"black"];
+	map<int,string> buttontypeColorMap <-[0::"red",1::"orange",2::"brown",3::"darkgreen",4::"green",5::"green",6::"black",7::"black"];
 	map<string,int> function_id_map <-["UP"::buttontypeColorMap.keys[0],"DOWN"::buttontypeColorMap.keys[1],"LEFT"::buttontypeColorMap.keys[2],"RIGHT"::buttontypeColorMap.keys[3],"SESSION"::buttontypeColorMap.keys[4],"USER_1"::buttontypeColorMap.keys[5],"USER_2"::buttontypeColorMap.keys[6],"MIXER"::buttontypeColorMap.keys[7]];
 	map<string,string> function_color_map <-["UP"::buttontypeColorMap.values[0],"DOWN"::buttontypeColorMap.values[1],"LEFT"::buttontypeColorMap.values[2],"RIGHT"::buttontypeColorMap.values[3],"SESSION"::buttontypeColorMap.values[4],"USER_1"::buttontypeColorMap.values[5],"USER_2"::buttontypeColorMap.values[6],"MIXER"::buttontypeColorMap.values[7]];
 	string cityIOurl <-"https://cityio.media.mit.edu/api/table/virtual_table"; 
@@ -28,7 +28,7 @@ global skills:[launchpadskill]
 	
 	action updateGrid
 	{   
-		if(function_color_map.keys contains buttonPressed and buttonPressed != "MIXER"){
+		if(function_color_map.keys contains buttonPressed and buttonPressed != "MIXER"  and buttonPressed != "USER_2"){
 		    ask launchpadGrid[ int(padPressed.y *8 + padPressed.x)]{
 		    	type<-function_id_map[buttonPressed];
 		    	color <- rgb(function_color_map[buttonPressed]);
@@ -38,6 +38,7 @@ global skills:[launchpadskill]
 		if(buttonPressed = "MIXER"){
 			ask launchpadGrid[ int(padPressed.y *8 + padPressed.x)]{
 				color <- #white;
+				type<--1;
 			}
 		}			
 		if(buttonPressed="ARM"){
@@ -46,8 +47,10 @@ global skills:[launchpadskill]
 			ask launchpadGrid{
 				type<-function_id_map[buttonPressed];
 				color<-#white;
+				type<--1;
 			}
 		}
+		write buttonPressed;
 		do updateDisplay;
 		do pushGrid(inputMatrixData);
 	}
@@ -92,13 +95,16 @@ global skills:[launchpadskill]
 
 grid launchpadGrid width: 8 height: 8{
 	int type;
+	init{
+		type<--1;
+	}
 }
 
 experiment Displays type: gui
 {
 	output
 	{
-		display View_change_color 
+		display View_change_color background:#black
 		{
 			grid launchpadGrid lines: #black;
 			event "pad_down" type: "launchpad" action: updateGrid;
