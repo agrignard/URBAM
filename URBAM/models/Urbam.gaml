@@ -35,8 +35,8 @@ global{
 	bool on_modification_bds <- false update: false;
 	
 	
-	//string cityIOUrl <-"https://cityio.media.mit.edu/api/table/cityIO_gama";
-	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/launchpad";
+	string cityIOUrl <-"https://cityio.media.mit.edu/api/table/urbam";
+	//string cityIOUrl <-"https://cityio.media.mit.edu/api/table/launchpad";
 	shape_file nyc_bounds0_shape_file <- shape_file("../includes/GIS/nyc_bounds.shp");
 	
 	
@@ -128,7 +128,8 @@ global{
 	
 	
 	reflex test_load_file_from_cityIO when: load_grid_file_from_cityIO and every(10#cycle) {
-		do load_cityIO_matrix_v2(cityIOUrl);
+		//do load_cityIO_matrix_v2(cityIOUrl);
+		do load_cityIO_urbam_v2(cityIOUrl);
 	}
 	
 	reflex test_load_file when: load_grid_file and every(100#cycle){
@@ -594,8 +595,8 @@ experiment cityScienceTable type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	output {
 		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false fullscreen:1
-		camera_pos: {2160.3206,1631.7982,12043.0275} camera_look_pos: {2160.3206,1631.588,0.0151} camera_up_vector: {0.0,1.0,0.0}{
-		//camera_pos: {2428.2049,2969.8873,11644.0583} camera_look_pos: {2428.2049,2969.684,-0.0081} camera_up_vector: {0.0,1.0,0.0}{
+		keystone: [{0.11656421991808863,0.167109629356474,0.0},{0.14285268545600432,0.8143146078580775,0.0},{0.7170183091562854,0.8153797412496441,0.0},{0.735674403288836,0.16759312313473373,0.0}]{	 
+		
 			species cell aspect:default;// refresh: on_modification_cells;
 			species road ;
 			species people;
