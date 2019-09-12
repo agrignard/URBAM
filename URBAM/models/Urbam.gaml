@@ -25,7 +25,7 @@ global{
 	bool udpScannerReader <- false; 
 	bool udpSliderReader <- false; 
 	bool editionMode <-false;
-	bool launchpad<-true;
+	bool launchpad<-false;
 	
 	bool show_cells parameter: 'Show cells:' category: 'Aspect' <- false;
 	bool show_building parameter: 'Show Building:' category: 'Aspect' <- true;
@@ -314,6 +314,7 @@ global{
 	}
 	
 		action load_cityIO_urbam_v2(string cityIOUrl_) {
+			write "fuck";
 		map<string, unknown> cityMatrixData;
 	    list<map<string, int>> cityMatrixCell;	
 		try {
@@ -328,10 +329,10 @@ global{
 		int x;
 		int y;
 		int id;
-		loop i from:0 to: (ncols*nrows-2){ 
-			if((i mod nrows) mod 2 = 1 and int(i/ncols) mod 2 = 0){   
-				x<- int((i mod nrows)/2);
-			    y<-int((int(i/ncols))/2);
+		loop i from:0 to: (ncols*nrows)-1{ 
+			if((i mod nrows) mod 2 = 0 and int(i/ncols) mod 2 = 0){   
+				x<- grid_width-1-int((i mod nrows)/2);
+			    y<-grid_height-1-int((int(i/ncols))/2);
 			    id<-int(cityMatrixData["grid"][i][0]);
 			    if(id!=-2 and id !=-1 and id!=6 ){
 	      	  		ask world{do createCell(id+1, x, y);}
