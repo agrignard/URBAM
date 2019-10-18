@@ -408,7 +408,7 @@ species building parent: poi {
 	}
 	aspect default {
 		//if show_building {draw shape scaled_by building_scale color: color;}
-		if show_building {draw shape scaled_by 0.5 color: color;}
+		if show_building {draw shape scaled_by 0.75 color: color;}
 		//if show_building {draw shape scaled_by building_scale*1.2 empty:true color: color;}
 	}
 }
@@ -600,8 +600,7 @@ experiment cityScienceTable type: gui autorun: true{
 	float minimum_cycle_duration <- 0.05;
 	output {
 		display map synchronized:true background:blackMirror ? #black :#white toolbar:false type:opengl  draw_env:false fullscreen:1
-		keystone: [{0.09873319012165316,0.15747776671865577,0.0},{0.12499696334845561,0.8159451128747172,0.0},{0.7411358068057597,0.8165576025759461,0.0},{0.7569689458996193,0.15381583447856062,0.0}]{	 
-		
+	    keystone: [{0.10472044090258306,0.14916900648061737,0.0},{0.12898846386907553,0.804866765890666,0.0},{0.7424663069792998,0.8156344069939415,0.0},{0.7629561966805493,0.15473903006056489,0.0}]{
 			species cell aspect:default;// refresh: on_modification_cells;
 			species road ;
 			species people;
