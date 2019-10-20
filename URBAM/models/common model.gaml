@@ -15,7 +15,7 @@ global{
 	float weight_bike parameter: 'weight bike' category: "Mobility" step: 0.1 min:0.1 max:1.0 <- 0.5 ;
 	float weight_pev  step: 0.1 min: 0.0 max: 1.0 parameter: "weight pev" category: "Mobility" <- 0.1;
 		
-	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"hide" among:["default", "default (car)", "hide","road type","edge color","split (3)", "split (5)"];
+	string road_aspect parameter: 'Roads aspect:' category: 'Road Aspect' <-"split (5)" among:["default", "default (car)", "hide","road type","edge color","split (3)", "split (5)"];
 	float spacing parameter: 'Spacing ' category: 'Road Aspect' <- 0.75 min:0.0 max: 1.5;
 	float line_width parameter: 'Line width' category: 'Road Aspect' <- 0.65 min:0.0 max: 3.0;
 	bool dynamical_width parameter: 'Dynamical width' category: 'Road Aspect' <- true;
@@ -26,7 +26,7 @@ global{
 	
 	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)", "color","hide"];
 	
-	int global_people_size <-50;
+	int global_people_size <-10;
 	
 	list<basic_people> list_of_people;
 	
