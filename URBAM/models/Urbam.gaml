@@ -297,7 +297,6 @@ global{
 			//cityMatrixData <- json_file("../includes/cityIO_gama.json").contents;
 			write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_gama.json";
 		}
-		write cityMatrixData;
 		int nbCols <- int(map(map(cityMatrixData["header"])["spatial"])["ncols"]);
 		int nbRows <- int(map(map(cityMatrixData["header"])["spatial"])["nrows"]);
 		loop i from: 0 to: nbCols-1 {
@@ -323,7 +322,6 @@ global{
 			cityMatrixData <- json_file("../includes/cityIO_Urbam.json").contents;
 			write #current_error + "Connection to Internet lost or cityIO is offline - CityMatrix is a local version from cityIO_gama.json";
 		}
-		write cityMatrixData;
 		int ncols <- int(map(map(cityMatrixData["header"])["spatial"])["ncols"]);
 		int nrows <- int(map(map(cityMatrixData["header"])["spatial"])["nrows"]);
 		int x;
