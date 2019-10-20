@@ -26,7 +26,7 @@ global{
 	
 	string people_aspect parameter: 'People aspect:' category: 'People Aspect' <-"mode" among:["mode", "profile","dynamic_abstract","dynamic_abstract (car)", "color","hide"];
 	
-	int global_people_size <-10;
+	int global_people_size <-50;
 	
 	list<basic_people> list_of_people;
 	
