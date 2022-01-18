@@ -44,7 +44,7 @@ init {
 		//myTarget<-{myTarget.x -0.5 + rnd(150)/100.0,myTarget.y -0.5 + rnd(150)/100.0,myTarget.z + rnd(100)/100.0};
 	}
 	loop i from:0 to:5{
-	  graph tmp_mazeGraph <- as_distance_graph((cells where (each.location.z = i)), ["distance"::1.0,"species"::edge_agent]);		
+	  graph tmp_mazeGraph <- as_distance_graph((cells where (each.location.z = i)), 1.0,edge_agent);		
 	  /*mazeGraph <- as_distance_graph((cells where (each.location.x = i)), ["distance"::1.0,"species"::edge_agent]);
 	  mazeGraph <- as_distance_graph((cells where (each.location.y = i)), ["distance"::1.0,"species"::edge_agent]);
 	  mazeGraph <- as_distance_graph((cells where (each.location.z = i)), ["distance"::1.0,"species"::edge_agent]);	*/
@@ -72,11 +72,11 @@ species cells{
 	list<cells> neigbhours update: cells at_distance (2.0);
 	
 	aspect default {
-		draw box(0.45,0.45,0.125) color:color border:#black at:location empty:false;
+		draw box(0.45,0.45,0.125) color:color border:#black at:location wireframe:false;
 	}
 	
 	aspect floor {
-		draw square(0.45) color:color border:#black at:location empty:false;
+		draw square(0.45) color:color border:#black at:location wireframe:false;
 	}	
 }
 

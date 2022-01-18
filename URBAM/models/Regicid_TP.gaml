@@ -49,8 +49,8 @@ global{
 				meso_cells << type_meso;
 				list<string> micro_cells;
 				loop micro over: cell_micro {
-					int index <- rnd_choice(microCellsProportions[type_meso]);
-					micro_cells<< microCellsTypes[index];
+					int index_ <- rnd_choice(microCellsProportions[type_meso]);
+					micro_cells<< microCellsTypes[index_];
 				}
 				meso.micro_cells<< micro_cells;
 			}
@@ -127,7 +127,7 @@ species road {
 grid cell_micro  width: micro_grid_width height: micro_grid_height ;
 
 grid cell_meso  width: meso_grid_width height: meso_grid_height {
-	list<list<int, string>> micro_cells;
+	list<list<string>> micro_cells;
 	aspect is_selected {
 		if (currentMeso = self) {
 			draw shape.contour + environment_height/100.0 color: #red;
@@ -175,12 +175,12 @@ experiment main autorun: true{
 	output{
 		layout #split;
 		display macro type:opengl{
-			grid cell_macro lines: #white;
+			grid cell_macro border: #white;
 			species cell_macro aspect: is_selected;
 			event mouse_down action: activateMacro; 
 		}
 		display meso type:opengl  {
-			grid cell_meso lines: #white;
+			grid cell_meso border: #white;
 			species cell_meso aspect: is_selected;
 			event mouse_down action: activateMeso; 
 		}

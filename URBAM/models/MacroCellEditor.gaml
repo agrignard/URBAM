@@ -19,7 +19,7 @@ global {
 	}	
 	
 	user_command save_data {
-		save cells to: "../includes/GIS/France_Macro.shp" type:shp with: [type::"Type"];
+		save cells to: "../includes/GIS/France_Macro.shp" type:shp attributes: [type::"Type"];
 	}
 	
 	action activate_act {
@@ -27,7 +27,7 @@ global {
 		if(selected_but != nil) {
 			ask selected_but {
 				if (type = "") {
-					save cells to: "../includes/GIS/France_squares.shp" type:shp with: [type::"Type"];
+					save cells to: "../includes/GIS/France_squares.shp" type:shp attributes: [type::"Type"];
 				} 
 				else {					
 				  ask button {bord_col<-#black;}
